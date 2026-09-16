@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,11 +6,15 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Pressable,
+  Image,
 } from "react-native";
+
+import { useFocusEffect } from "@react-navigation/native";
 
 const API_URL = "http://localhost:3000";
 
-export default function CalendarioScreen() {
+export default function CalendarioScreen({ navigation }) {
   const [reservas, setReservas] = useState([]);
   const [carregando, setCarregando] = useState(true);
 
@@ -39,9 +43,12 @@ export default function CalendarioScreen() {
     }
   }
 
-  useEffect(() => {
-    carregarReservas();
-  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      carregarReservas();
+    }, [])
+  );
 
   function formatarData(data) {
     if (!data) return "";
@@ -61,71 +68,172 @@ export default function CalendarioScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.titulo}>Calendário de Reservas</Text>
 
-      {carregando ? (
-        <ActivityIndicator size="large" />
-      ) : reservas.length === 0 ? (
-        <Text style={styles.vazio}>
-          Não existem reservas futuras.
+      <View style={styles.header}>
+
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.voltar}
+        >
+          <Image
+            source={require("../assets/seta.png")}
+            style={styles.icon}
+          />
+        </Pressable>
+
+        <Text style={styles.tituloHeader}>
+          Calendário de Reservas
         </Text>
-      ) : (
-        <ScrollView>
-          {reservas.map((reserva) => (
-            <View
-              key={reserva.idReserva}
-              style={styles.reserva}
-            >
-              <Text style={styles.data}>
-                {formatarData(reserva.reservaData)}
-              </Text>
 
-              <Text style={styles.recurso}>
-                {reserva.nomeRecurso}
-              </Text>
+        
+        <View style={styles.espaco} />
 
-              <Text style={styles.horario}>
-                {formatarHora(reserva.horaRetirada)}
-                {" - "}
-                {formatarHora(reserva.horaDevolucao)}
-              </Text>
+      </View>
 
-              <Text style={styles.responsavel}>
-                Responsável: {reserva.responsavelNome}
-              </Text>
-            </View>
-          ))}
-        </ScrollView>
-      )}
+      {/* CONTEÚDO */}
+      <View style={styles.content}>
+
+        {carregando ? (
+          <View style={styles.loading}>
+            <ActivityIndicator size="large" />
+            <Text style={styles.loadingText}>
+              Carregando reservas...
+            </Text>
+          </View>
+
+        ) : reservas.length === 0 ? (
+
+          <Text style={styles.vazio}>
+            Não existem reservas futuras.
+          </Text>
+
+        ) : (
+
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.lista}
+          >
+
+            {reservas.map((reserva) => (
+
+              <View
+                key={reserva.idReserva}
+                style={styles.reserva}
+              >
+
+                <Text style={styles.data}>
+                  {formatarData(reserva.reservaData)}
+                </Text>
+
+                <Text style={styles.recurso}>
+                  {reserva.nomeRecurso}
+                </Text>
+
+                <Text style={styles.horario}>
+                  {formatarHora(reserva.horaRetirada)}
+                  {" - "}
+                  {formatarHora(reserva.horaDevolucao)}
+                </Text>
+
+                <Text style={styles.responsavel}>
+                  Responsável: {reserva.responsavelNome}
+                </Text>
+
+              </View>
+
+            ))}
+
+          </ScrollView>
+
+        )}
+
+      </View>
+
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+
+  /* TELA */
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
-    padding: 20,
+    backgroundColor: "#CCFCE4",
   },
 
-  titulo: {
-    fontSize: 24,
+  /* HEADER */
+  header: {
+    height: 75,
+    backgroundColor: "#FFF",
+
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+
+    paddingHorizontal: 20,
+  },
+
+  voltar: {
+    width: 28,
+    height: 28,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  icon: {
+    width: 28,
+    height: 28,
+    resizeMode: "contain",
+  },
+
+  tituloHeader: {
+    fontSize: 26,
     fontWeight: "bold",
-    marginBottom: 20,
   },
 
+  espaco: {
+    width: 28,
+  },
+
+  /* CONTEÚDO */
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 15,
+  },
+
+  lista: {
+    paddingBottom: 20,
+  },
+
+  /* CARREGAMENTO */
+  loading: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  loadingText: {
+    marginTop: 10,
+    fontSize: 15,
+  },
+
+  /* QUANDO NÃO HÁ RESERVAS */
   vazio: {
     fontSize: 16,
     textAlign: "center",
     marginTop: 30,
   },
 
+  /* CARD DA RESERVA */
   reserva: {
-    backgroundColor: "#fff",
+    backgroundColor: "#FFF",
+
     padding: 16,
-    borderRadius: 10,
-    marginBottom: 12,
-    elevation: 2,
+
+    borderRadius: 4,
+
+    marginBottom: 10,
   },
 
   data: {
@@ -149,4 +257,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
   },
+
 });

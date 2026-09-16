@@ -20,7 +20,7 @@ export default function LogoutScreen({
       index: 0,
       routes: [
         {
-          name: "Home"
+          name: "LoginUsuario"
         }
       ]
     });
