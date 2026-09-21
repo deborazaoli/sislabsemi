@@ -1,5 +1,3 @@
-import axios from "axios";
+const API_URL = "https://sislab-api.onrender.com";
 
-export const api = axios.create({
-  baseURL: "http://localhost:3000"
-});
+export default API_URL;

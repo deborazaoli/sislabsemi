@@ -9,8 +9,10 @@ import {
   ScrollView,
 } from "react-native";
 
-export default function HomeScreen({ navigation }) {
+export default function HomeScreen({ navigation, route }) {
   const { width } = useWindowDimensions();
+
+  const usuario = route?.params?.usuario;
 
   const isSmallScreen = width < 600;
   const isVerySmallScreen = width < 380;
@@ -44,7 +46,6 @@ export default function HomeScreen({ navigation }) {
           SISLAB
         </Text>
 
-
         {/* BOTÃO DO USUÁRIO / LOGOUT */}
         <Pressable
           style={[
@@ -73,7 +74,6 @@ export default function HomeScreen({ navigation }) {
 
       </View>
 
-
       {/* CONTEÚDO */}
       <ScrollView
         contentContainerStyle={[
@@ -101,7 +101,6 @@ export default function HomeScreen({ navigation }) {
           Sistema de Controle de
         </Text>
 
-
         <Text
           style={[
             styles.subtitle,
@@ -119,7 +118,6 @@ export default function HomeScreen({ navigation }) {
           Laboratórios, Salas e Equipamentos
         </Text>
 
-
         <Text
           style={[
             styles.section,
@@ -131,7 +129,6 @@ export default function HomeScreen({ navigation }) {
         >
           O que deseja fazer?
         </Text>
-
 
         {/* CARDS */}
         <View
@@ -155,7 +152,11 @@ export default function HomeScreen({ navigation }) {
                 paddingVertical: isSmallScreen ? 30 : 45,
               },
             ]}
-            onPress={() => navigation.navigate("Reserva")}
+            onPress={() =>
+              navigation.navigate("Reserva", {
+                usuario: usuario,
+              })
+            }
           >
 
             <Image
@@ -190,7 +191,6 @@ export default function HomeScreen({ navigation }) {
             </View>
 
           </Pressable>
-
 
           {/* CALENDÁRIO */}
           <Pressable
@@ -238,7 +238,6 @@ export default function HomeScreen({ navigation }) {
 
           </Pressable>
 
-
           {/* MINHAS RESERVAS */}
           <Pressable
             style={[
@@ -249,7 +248,11 @@ export default function HomeScreen({ navigation }) {
                 paddingVertical: isSmallScreen ? 30 : 45,
               },
             ]}
-            onPress={() => navigation.navigate("Historico")}
+            onPress={() =>
+              navigation.navigate("MinhasReservas", {
+                usuario: usuario,
+              })
+            }
           >
 
             <Image
@@ -289,7 +292,6 @@ export default function HomeScreen({ navigation }) {
 
       </ScrollView>
 
-
       {/* FOOTER */}
       <View
         style={[
@@ -312,14 +314,12 @@ export default function HomeScreen({ navigation }) {
   );
 }
 
-
 const styles = StyleSheet.create({
 
   container: {
     flex: 1,
     backgroundColor: "#ccfce4",
   },
-
 
   header: {
     backgroundColor: "#FFFFFF",
@@ -329,12 +329,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-
   logo: {
     fontWeight: "bold",
     color: "#007A33",
   },
-
 
   userButton: {
     backgroundColor: "#007A33",
@@ -343,12 +341,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-
   userIcon: {
     tintColor: "#FFF",
     resizeMode: "contain",
   },
-
 
   content: {
     flexGrow: 1,
@@ -357,30 +353,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-
   title: {
     fontWeight: "bold",
     textAlign: "center",
   },
-
 
   subtitle: {
     fontWeight: "bold",
     textAlign: "center",
   },
 
-
   section: {
     fontWeight: "600",
     textAlign: "center",
   },
 
-
   cardsContainer: {
     justifyContent: "center",
     alignItems: "center",
   },
-
 
   card: {
     backgroundColor: "#FFF",
@@ -400,11 +391,9 @@ const styles = StyleSheet.create({
     borderColor: "#00A884",
   },
 
-
   icon: {
     resizeMode: "contain",
   },
-
 
   button: {
     backgroundColor: "#007A33",
@@ -416,7 +405,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-
   buttonText: {
     color: "#FFF",
 
@@ -424,7 +412,6 @@ const styles = StyleSheet.create({
 
     textAlign: "center",
   },
-
 
   footer: {
     backgroundColor: "#FFFFFF",

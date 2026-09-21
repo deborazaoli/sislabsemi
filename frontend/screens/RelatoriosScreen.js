@@ -2,20 +2,27 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  Button,
   StyleSheet,
   ScrollView,
   Pressable,
   Image
 } from "react-native";
 
+import API_URL from "../services/api";
+
 export default function RelatoriosScreen({ navigation }) {
   const [relatorio, setRelatorio] = useState([]);
 
   const buscar = async () => {
-    const res = await fetch("http://localhost:3000/reservas/all");
-    const data = await res.json();
-    setRelatorio(data);
+    try {
+      const res = await fetch(`${API_URL}/reservas/all`);
+      const data = await res.json();
+
+      setRelatorio(data);
+    } catch (error) {
+      console.log("Erro ao buscar relatório:", error);
+      alert("Não foi possível carregar o relatório.");
+    }
   };
 
   return (
@@ -35,6 +42,7 @@ export default function RelatoriosScreen({ navigation }) {
         </Text>
 
         <View style={{ width: 28 }} />
+
       </View>
 
       {/* CONTEÚDO */}
@@ -134,4 +142,5 @@ const styles = StyleSheet.create({
   texto: {
     fontSize: 14
   }
+
 });

@@ -40,7 +40,7 @@ export default function LoginScreen({ navigation }) {
 
       <View style={styles.container}>
 
-
+        
         <Text style={styles.subtitulo}>Login</Text>
         <TextInput
           placeholder="Email"

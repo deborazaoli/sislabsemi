@@ -1,5 +1,6 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { StatusBar } from "expo-status-bar";
 
 import HomeScreen from "./screens/HomeScreen";
 import ReservaScreen from "./screens/ReservaScreen";
@@ -23,95 +24,99 @@ const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
-    <NavigationContainer>
+    <>
+      {/* Oculta horário, Wi-Fi, bateria e demais informações do celular */}
+      <StatusBar hidden />
 
-      <Stack.Navigator
-        initialRouteName="LoginUsuario"
-        screenOptions={{
-          headerShown: false
-        }}
-      >
+      <NavigationContainer>
+        <Stack.Navigator
+          initialRouteName="LoginUsuario"
+          screenOptions={{
+            headerShown: false
+          }}
+        >
 
-        {/* PRIMEIRA TELA DO SISTEMA */}
-        <Stack.Screen
-          name="LoginUsuario"
-          component={LoginUsuarioScreen}
-        />
+          {/* PRIMEIRA TELA DO SISTEMA */}
+          <Stack.Screen
+            name="LoginUsuario"
+            component={LoginUsuarioScreen}
+          />
 
-        {/* CADASTRO DE USUÁRIO */}
-        <Stack.Screen
-          name="CadastroUsuario"
-          component={CadastroUsuarioScreen}
-        />
+          {/* CADASTRO DE USUÁRIO */}
+          <Stack.Screen
+            name="CadastroUsuario"
+            component={CadastroUsuarioScreen}
+          />
 
-        {/* HOME */}
-        <Stack.Screen
-          name="Home"
-          component={HomeScreen}
-        />
+          {/* HOME */}
+          <Stack.Screen
+            name="Home"
+            component={HomeScreen}
+          />
 
-        {/* RESERVAS */}
-        <Stack.Screen
-          name="Reserva"
-          component={ReservaScreen}
-        />
+          {/* RESERVAS */}
+          <Stack.Screen
+            name="Reserva"
+            component={ReservaScreen}
+          />
 
-        <Stack.Screen
-          name="Calendario"
-          component={CalendarioScreen}
-        />
+          <Stack.Screen
+            name="Calendario"
+            component={CalendarioScreen}
+          />
 
-        <Stack.Screen
-          name="Historico"
-          component={MinhasReservasScreen}
-        />
+          {/* MINHAS RESERVAS */}
+          <Stack.Screen
+            name="MinhasReservas"
+            component={MinhasReservasScreen}
+          />
 
-        {/* LOGIN ADMINISTRATIVO */}
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen}
-        />
+          {/* LOGIN ADMINISTRATIVO */}
+          <Stack.Screen
+            name="Login"
+            component={LoginScreen}
+          />
 
-        {/* ÁREA ADMINISTRATIVA */}
-        <Stack.Screen
-          name="Admin"
-          component={AdminScreen}
-        />
+          {/* ÁREA ADMINISTRATIVA */}
+          <Stack.Screen
+            name="Admin"
+            component={AdminScreen}
+          />
 
-        {/* RECURSOS */}
-        <Stack.Screen
-          name="Laboratorios"
-          component={LaboratoriosScreen}
-        />
+          {/* RECURSOS */}
+          <Stack.Screen
+            name="Laboratorios"
+            component={LaboratoriosScreen}
+          />
 
-        <Stack.Screen
-          name="Salas"
-          component={SalasScreen}
-        />
+          <Stack.Screen
+            name="Salas"
+            component={SalasScreen}
+          />
 
-        <Stack.Screen
-          name="Equipamentos"
-          component={EquipamentosScreen}
-        />
+          <Stack.Screen
+            name="Equipamentos"
+            component={EquipamentosScreen}
+          />
 
-        <Stack.Screen
-          name="RecursoForm"
-          component={RecursoFormScreen}
-        />
+          <Stack.Screen
+            name="RecursoForm"
+            component={RecursoFormScreen}
+          />
 
-        <Stack.Screen
-          name="Relatorios"
-          component={RelatoriosScreen}
-        />
+          <Stack.Screen
+            name="Relatorios"
+            component={RelatoriosScreen}
+          />
 
-        {/* LOGOUT */}
-        <Stack.Screen
-          name="Logout"
-          component={LogoutScreen}
-        />
+          {/* LOGOUT */}
+          <Stack.Screen
+            name="Logout"
+            component={LogoutScreen}
+          />
 
-      </Stack.Navigator>
-
-    </NavigationContainer>
+        </Stack.Navigator>
+      </NavigationContainer>
+    </>
   );
 }

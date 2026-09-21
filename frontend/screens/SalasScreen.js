@@ -10,11 +10,13 @@ import {
 
 import { useFocusEffect } from "@react-navigation/native";
 
+import API_URL from "../services/api";
+
 export default function SalasScreen({ navigation }) {
   const [dados, setDados] = useState([]);
 
   const carregarDados = () => {
-    fetch("http://localhost:3000/recursos?tipo=sala")
+    fetch(`${API_URL}/recursos?tipo=sala`)
       .then(res => res.json())
       .then(setDados)
       .catch(console.log);
@@ -27,7 +29,7 @@ export default function SalasScreen({ navigation }) {
   );
 
   const excluir = async (id) => {
-    await fetch(`http://localhost:3000/recursos/${id}`, {
+    await fetch(`${API_URL}/recursos/${id}`, {
       method: "DELETE"
     });
 
@@ -51,6 +53,7 @@ export default function SalasScreen({ navigation }) {
         </Text>
 
         <View style={{ width: 28 }} />
+
       </View>
 
       <View style={styles.content}>
@@ -88,14 +91,18 @@ export default function SalasScreen({ navigation }) {
                     })
                   }
                 >
-                  <Text style={styles.btnText}>Editar</Text>
+                  <Text style={styles.btnText}>
+                    Editar
+                  </Text>
                 </Pressable>
 
                 <Pressable
                   style={styles.btn}
                   onPress={() => excluir(item.idRecurso)}
                 >
-                  <Text style={styles.btnText}>Excluir</Text>
+                  <Text style={styles.btnText}>
+                    Excluir
+                  </Text>
                 </Pressable>
 
               </View>
@@ -147,7 +154,6 @@ const styles = StyleSheet.create({
     paddingBottom: 20
   },
 
-  /* BOTÃO ADD (SEU ORIGINAL) */
   addBtn: {
     width: 45,
     height: 45,
@@ -193,4 +199,5 @@ const styles = StyleSheet.create({
   btnText: {
     color: "#FFF"
   }
+
 });

@@ -10,6 +10,8 @@ import {
   ScrollView
 } from "react-native";
 
+import API_URL from "../services/api";
+
 export default function RecursoFormScreen({ route, navigation }) {
 
   const { width } = useWindowDimensions();
@@ -48,25 +50,23 @@ export default function RecursoFormScreen({ route, navigation }) {
     recurso?.codigoValidade || ""
   );
 
-
   // Nome do tipo para aparecer no título
   const nomeTipo = {
     sala: "Sala",
     laboratorio: "Laboratório",
-    equipamento: "Equipamento"
+    equipamento: "Equipamento",
+    Sala: "Sala",
+    Laboratório: "Laboratório",
+    Equipamento: "Equipamento"
   };
-
 
   const salvar = async () => {
 
     try {
 
-      const baseURL = "http://localhost:3000";
-
       const url = recurso
-        ? `${baseURL}/recursos/${recurso.idRecurso}`
-        : `${baseURL}/recursos`;
-
+        ? `${API_URL}/recursos/${recurso.idRecurso}`
+        : `${API_URL}/recursos`;
 
       const body = {
 
@@ -77,7 +77,7 @@ export default function RecursoFormScreen({ route, navigation }) {
         tipoRecurso: tipo,
 
         capacidadePessoas:
-          tipo === "equipamento"
+          tipo === "equipamento" || tipo === "Equipamento"
             ? null
             : Number(capacidade || 0),
 
@@ -86,16 +86,15 @@ export default function RecursoFormScreen({ route, navigation }) {
         observacao,
 
         codigoSeguranca:
-          tipo === "equipamento"
+          tipo === "equipamento" || tipo === "Equipamento"
             ? codigoSeguranca
             : null,
 
         codigoValidade:
-          tipo === "equipamento"
+          tipo === "equipamento" || tipo === "Equipamento"
             ? codigoValidade
             : null
       };
-
 
       const res = await fetch(url, {
 
@@ -109,7 +108,6 @@ export default function RecursoFormScreen({ route, navigation }) {
 
       });
 
-
       if (!res.ok) {
 
         const erro = await res.text();
@@ -120,9 +118,7 @@ export default function RecursoFormScreen({ route, navigation }) {
 
       }
 
-
       navigation.goBack();
-
 
     } catch (err) {
 
@@ -134,11 +130,9 @@ export default function RecursoFormScreen({ route, navigation }) {
 
   };
 
-
   return (
 
     <View style={styles.container}>
-
 
       {/* HEADER */}
 
@@ -167,7 +161,6 @@ export default function RecursoFormScreen({ route, navigation }) {
 
         </Pressable>
 
-
         <Text
           style={[
             styles.tituloHeader,
@@ -179,7 +172,6 @@ export default function RecursoFormScreen({ route, navigation }) {
           SISLAB
         </Text>
 
-
         <View
           style={{
             width: isSmallScreen ? 24 : 28
@@ -187,7 +179,6 @@ export default function RecursoFormScreen({ route, navigation }) {
         />
 
       </View>
-
 
       {/* CONTEÚDO */}
 
@@ -203,7 +194,6 @@ export default function RecursoFormScreen({ route, navigation }) {
         ]}
       >
 
-
         <Text
           style={[
             styles.title,
@@ -218,14 +208,13 @@ export default function RecursoFormScreen({ route, navigation }) {
           }
         </Text>
 
-
         {/* NOME */}
 
         <TextInput
           placeholder={
-            tipo === "laboratorio"
+            tipo === "laboratorio" || tipo === "Laboratório"
               ? "Nome do laboratório"
-              : tipo === "sala"
+              : tipo === "sala" || tipo === "Sala"
               ? "Nome da sala"
               : "Nome do equipamento"
           }
@@ -234,10 +223,9 @@ export default function RecursoFormScreen({ route, navigation }) {
           style={styles.input}
         />
 
-
         {/* CAPACIDADE */}
 
-        {tipo !== "equipamento" && (
+        {tipo !== "equipamento" && tipo !== "Equipamento" && (
 
           <TextInput
             placeholder="Capacidade de pessoas"
@@ -249,7 +237,6 @@ export default function RecursoFormScreen({ route, navigation }) {
 
         )}
 
-
         {/* LOCALIZAÇÃO */}
 
         <TextInput
@@ -258,7 +245,6 @@ export default function RecursoFormScreen({ route, navigation }) {
           onChangeText={setLocalizacao}
           style={styles.input}
         />
-
 
         {/* OBSERVAÇÃO */}
 
@@ -270,10 +256,9 @@ export default function RecursoFormScreen({ route, navigation }) {
           multiline
         />
 
-
         {/* CAMPOS EXCLUSIVOS DO EQUIPAMENTO */}
 
-        {tipo === "equipamento" && (
+        {(tipo === "equipamento" || tipo === "Equipamento") && (
 
           <>
 
@@ -283,7 +268,6 @@ export default function RecursoFormScreen({ route, navigation }) {
               onChangeText={setCodigoSeguranca}
               style={styles.input}
             />
-
 
             <TextInput
               placeholder="Código de validade"
@@ -295,7 +279,6 @@ export default function RecursoFormScreen({ route, navigation }) {
           </>
 
         )}
-
 
         {/* BOTÃO SALVAR */}
 
@@ -310,7 +293,6 @@ export default function RecursoFormScreen({ route, navigation }) {
 
         </Pressable>
 
-
       </ScrollView>
 
     </View>
@@ -319,14 +301,12 @@ export default function RecursoFormScreen({ route, navigation }) {
 
 }
 
-
 const styles = StyleSheet.create({
 
   container: {
     flex: 1,
     backgroundColor: "#ccfce4"
   },
-
 
   header: {
     backgroundColor: "#FFFFFF",
@@ -338,29 +318,24 @@ const styles = StyleSheet.create({
     alignItems: "center"
   },
 
-
   tituloHeader: {
     fontWeight: "bold",
     color: "#007A33"
   },
 
-
   icon: {
     resizeMode: "contain"
   },
 
-
   content: {
     flexGrow: 1
   },
-
 
   title: {
     fontWeight: "bold",
     marginBottom: 20,
     color: "#000"
   },
-
 
   input: {
     backgroundColor: "#FFFFFF",
@@ -374,7 +349,6 @@ const styles = StyleSheet.create({
     minHeight: 48
   },
 
-
   btn: {
     backgroundColor: "#007A33",
 
@@ -386,7 +360,6 @@ const styles = StyleSheet.create({
 
     marginTop: 8
   },
-
 
   btnText: {
     color: "#FFFFFF",

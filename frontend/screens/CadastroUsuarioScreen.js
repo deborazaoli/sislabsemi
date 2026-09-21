@@ -13,6 +13,8 @@ import {
   Platform
 } from "react-native";
 
+import API_URL from "../services/api";
+
 
 export default function CadastroUsuarioScreen({ navigation }) {
 
@@ -34,10 +36,31 @@ export default function CadastroUsuarioScreen({ navigation }) {
       !senha ||
       !confirmarSenha
     ) {
-
       Alert.alert(
         "Atenção",
         "Preencha todos os campos."
+      );
+
+      return;
+    }
+
+
+    if (!email.includes("@")) {
+
+      Alert.alert(
+        "Email inválido",
+        "Informe um email válido contendo '@'."
+      );
+
+      return;
+    }
+
+
+    if (senha.length < 6) {
+
+      Alert.alert(
+        "Senha inválida",
+        "A senha deve ter no mínimo 6 caracteres."
       );
 
       return;
@@ -61,7 +84,7 @@ export default function CadastroUsuarioScreen({ navigation }) {
 
 
       const response = await fetch(
-        "http://localhost:3000/auth/cadastro",
+        `${API_URL}/auth/cadastro`,
         {
           method: "POST",
 
@@ -108,7 +131,7 @@ export default function CadastroUsuarioScreen({ navigation }) {
 
     } catch (error) {
 
-      console.log(error);
+      console.log("Erro no cadastro:", error);
 
       Alert.alert(
         "Erro",
@@ -126,143 +149,182 @@ export default function CadastroUsuarioScreen({ navigation }) {
 
   return (
 
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={
-        Platform.OS === "ios"
-          ? "padding"
-          : undefined
-      }
-    >
+    <View style={styles.safeArea}>
 
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={
+          Platform.OS === "ios"
+            ? "padding"
+            : undefined
+        }
       >
 
-        {/* HEADER */}
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
 
-        <View style={styles.header}>
+          {/* HEADER */}
 
-          <Pressable
-            onPress={() => navigation.goBack()}
-          >
+          <View style={styles.header}>
 
-            <Image
-              source={require("../assets/seta.png")}
-              style={styles.backIcon}
-            />
+            <Pressable
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+            >
 
-          </Pressable>
+              <Image
+                source={require("../assets/seta.png")}
+                style={styles.backIcon}
+              />
 
-
-          <Text style={styles.logo}>
-            SISLAB
-          </Text>
-
-
-          <View style={styles.headerSpace} />
-
-        </View>
+            </Pressable>
 
 
-        {/* CONTEÚDO */}
-
-        <View style={styles.content}>
-
-          <Text style={styles.title}>
-            Criar cadastro
-          </Text>
-
-
-          <Text style={styles.subtitle}>
-            Preencha seus dados para criar uma conta
-          </Text>
-
-
-          <TextInput
-            style={styles.input}
-            placeholder="Nome completo"
-            value={nome}
-            onChangeText={setNome}
-          />
-
-
-          <TextInput
-            style={styles.input}
-            placeholder="Matrícula"
-            value={matricula}
-            onChangeText={setMatricula}
-          />
-
-
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-
-
-          <TextInput
-            style={styles.input}
-            placeholder="Senha"
-            value={senha}
-            onChangeText={setSenha}
-            secureTextEntry
-          />
-
-
-          <TextInput
-            style={styles.input}
-            placeholder="Confirmar senha"
-            value={confirmarSenha}
-            onChangeText={setConfirmarSenha}
-            secureTextEntry
-          />
-
-
-          <Pressable
-            style={[
-              styles.button,
-              carregando && styles.buttonDisabled
-            ]}
-            onPress={cadastrar}
-            disabled={carregando}
-          >
-
-            <Text style={styles.buttonText}>
-              {carregando
-                ? "Cadastrando..."
-                : "Cadastrar"}
+            <Text style={styles.logo}>
+              SISLAB
             </Text>
 
-          </Pressable>
 
-        </View>
+            <View style={styles.headerSpace} />
+
+          </View>
 
 
-        {/* FOOTER */}
+          {/* CONTEÚDO */}
 
-        <View style={styles.footer}>
+          <View style={styles.content}>
 
-          <Text>
-            IFPE Campus Jaboatão
-          </Text>
+            <Text style={styles.title}>
+              Criar cadastro
+            </Text>
 
-        </View>
 
-      </ScrollView>
+            <Text style={styles.subtitle}>
+              Preencha seus dados para criar uma conta
+            </Text>
 
-    </KeyboardAvoidingView>
+
+            {/* NOME */}
+
+            <Text style={styles.label}>
+              Nome completo
+            </Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Digite seu nome completo"
+              value={nome}
+              onChangeText={setNome}
+            />
+
+
+            {/* MATRÍCULA */}
+
+            <Text style={styles.label}>
+              Matrícula
+            </Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Digite sua matrícula"
+              value={matricula}
+              onChangeText={setMatricula}
+              autoCapitalize="characters"
+            />
+
+
+            {/* EMAIL */}
+
+            <Text style={styles.label}>
+              Email
+            </Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="exemplo@email.com"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+
+            {/* SENHA */}
+
+            <Text style={styles.label}>
+              Senha
+            </Text>
+
+            <Text style={styles.description}>
+              A senha deve ter no mínimo 6 caracteres.
+            </Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Digite sua senha"
+              value={senha}
+              onChangeText={setSenha}
+              secureTextEntry
+            />
+
+
+            {/* CONFIRMAR SENHA */}
+
+            <Text style={styles.label}>
+              Confirmar senha
+            </Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Digite a senha novamente"
+              value={confirmarSenha}
+              onChangeText={setConfirmarSenha}
+              secureTextEntry
+            />
+
+
+            {/* BOTÃO */}
+
+            <Pressable
+              style={[
+                styles.button,
+                carregando && styles.buttonDisabled
+              ]}
+              onPress={cadastrar}
+              disabled={carregando}
+            >
+
+              <Text style={styles.buttonText}>
+                {carregando
+                  ? "Cadastrando..."
+                  : "Cadastrar"}
+              </Text>
+
+            </Pressable>
+
+          </View>
+
+        </ScrollView>
+
+      </KeyboardAvoidingView>
+
+    </View>
 
   );
 }
 
 
 const styles = StyleSheet.create({
+
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#ccfce4"
+  },
+
 
   container: {
     flex: 1,
@@ -276,12 +338,21 @@ const styles = StyleSheet.create({
 
 
   header: {
-    height: 75,
-    backgroundColor: "#FFFFFF",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20
+  height: 85,
+  backgroundColor: "#FFFFFF",
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  paddingHorizontal: 20,
+  paddingTop: 10
+},
+
+
+  backButton: {
+    width: 35,
+    height: 35,
+    justifyContent: "center",
+    alignItems: "center"
   },
 
 
@@ -301,7 +372,7 @@ const styles = StyleSheet.create({
 
 
   headerSpace: {
-    width: 28
+    width: 35
   },
 
 
@@ -310,9 +381,8 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 500,
     alignSelf: "center",
-    justifyContent: "center",
     paddingHorizontal: 30,
-    paddingVertical: 40
+    paddingVertical: 35
   },
 
 
@@ -333,11 +403,26 @@ const styles = StyleSheet.create({
   },
 
 
+  label: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#222",
+    marginBottom: 3
+  },
+
+
+  description: {
+    fontSize: 13,
+    color: "#666",
+    marginBottom: 8
+  },
+
+
   input: {
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 15,
-    marginBottom: 15,
+    marginBottom: 18,
     fontSize: 16
   },
 
@@ -360,12 +445,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 17,
     fontWeight: "bold"
-  },
-
-
-  footer: {
-    padding: 15,
-    alignItems: "center"
   }
 
 });
