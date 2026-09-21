@@ -8,13 +8,20 @@ const authRoutes = require("./routes/authRoutes");
 const app = express();
 
 app.use(cors());
-
 app.use(express.json());
 
 app.use("/recursos", recursoRoutes);
 app.use("/reservas", reservaRoutes);
 app.use("/auth", authRoutes);
 
-app.listen(3000, () => {
-  console.log("API rodando na porta 3000");
+app.get("/", (req, res) => {
+  res.json({
+    message: "API SisLab funcionando!"
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`API rodando na porta ${PORT}`);
 });
