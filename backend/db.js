@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const mysql = require("mysql2");
 
 console.log("DB_HOST:", process.env.DB_HOST);
@@ -9,7 +11,7 @@ console.log("DB_SSL:", process.env.DB_SSL);
 const db = mysql.createConnection({
   host: process.env.DB_HOST || "localhost",
   port: Number(process.env.DB_PORT) || 3306,
-  user: process.env.DB_USER || "root",
+  user: process.env.DB_USER || "aluno",
   password: process.env.DB_PASSWORD || "ifpecjbg",
   database: process.env.DB_NAME || "sislab",
 
