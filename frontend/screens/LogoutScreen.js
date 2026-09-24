@@ -39,10 +39,7 @@ export default function LogoutScreen({
           style={styles.voltar}
         >
 
-          <Image
-            source={require("../assets/seta.png")}
-            style={styles.icon}
-          />
+        
 
         </Pressable>
 
