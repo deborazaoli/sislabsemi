@@ -27,8 +27,30 @@ export default function LogoutScreen({
   };
 
   return (
-    <View style={styles.container}>
 
+    
+
+    
+    <View style={styles.container}>
+<View style={styles.header}>
+
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.voltar}
+        >
+
+          <Image
+            source={require("../assets/seta.png")}
+            style={styles.icon}
+          />
+
+        </Pressable>
+
+
+
+        <View style={styles.espaco} />
+
+      </View>
       <Text style={styles.title}>
         Deseja sair?
       </Text>
@@ -43,6 +65,10 @@ export default function LogoutScreen({
       </Pressable>
 
     </View>
+
+
+
+
   );
 }
 
@@ -57,6 +83,49 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     marginBottom: 20
+  },
+
+  header: {
+    height: 75,
+    backgroundColor: "#FFF",
+
+    flexDirection: "row",
+
+    justifyContent: "space-between",
+
+    alignItems: "center",
+
+    paddingHorizontal: 20,
+  },
+
+
+  voltar: {
+    width: 40,
+    height: 40,
+
+    justifyContent: "center",
+
+    alignItems: "center",
+  },
+
+
+  icon: {
+    width: 28,
+    height: 28,
+
+    resizeMode: "contain",
+  },
+
+
+  tituloHeader: {
+    fontSize: 26,
+    fontWeight: "bold",
+    color: "#007A33",
+  },
+
+
+  espaco: {
+    width: 40,
   },
 
   btn: {
