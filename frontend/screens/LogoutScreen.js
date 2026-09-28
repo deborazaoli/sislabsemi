@@ -6,12 +6,12 @@ import {
   StyleSheet
 } from "react-native";
 
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase";
 
-export default function LogoutScreen({
-  navigation
-}) {
+export default function LogoutScreen({ navigation }) {
 
   const sair = async () => {
     await signOut(auth);
@@ -27,52 +27,96 @@ export default function LogoutScreen({
   };
 
   return (
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
 
-    
+      <View style={styles.container}>
 
-    
-    <View style={styles.container}>
-<View style={styles.header}>
+        <View style={styles.header}>
 
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={styles.voltar}
-        >
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={styles.voltar}
+          >
+            <Text style={styles.seta}>‹</Text>
+          </Pressable>
 
-        
+          <Text style={styles.tituloHeader}>
+            Logout
+          </Text>
 
-        </Pressable>
+          <View style={styles.espaco} />
 
+        </View>
 
+        <View style={styles.conteudo}>
 
-        <View style={styles.espaco} />
+          <Text style={styles.title}>
+            Deseja sair?
+          </Text>
+
+          <Pressable
+            style={styles.btn}
+            onPress={sair}
+          >
+            <Text style={styles.txt}>
+              Fazer Logout
+            </Text>
+          </Pressable>
+
+        </View>
 
       </View>
-      <Text style={styles.title}>
-        Deseja sair?
-      </Text>
 
-      <Pressable
-        style={styles.btn}
-        onPress={sair}
-      >
-        <Text style={styles.txt}>
-          Fazer Logout
-        </Text>
-      </Pressable>
-
-    </View>
-
-
-
-
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#FFF"
+  },
+
   container: {
     flex: 1,
-    backgroundColor: "#CCFCE4",
+    backgroundColor: "#CCFCE4"
+  },
+
+  header: {
+    height: 65,
+    backgroundColor: "#FFF",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20
+  },
+
+  voltar: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center"
+  },
+
+  seta: {
+    fontSize: 42,
+    color: "#007A33",
+    lineHeight: 42
+  },
+
+  tituloHeader: {
+    fontSize: 26,
+    fontWeight: "bold",
+    color: "#007A33"
+  },
+
+  espaco: {
+    width: 40
+  },
+
+  conteudo: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center"
   },
@@ -80,49 +124,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     marginBottom: 20
-  },
-
-  header: {
-    height: 75,
-    backgroundColor: "#FFF",
-
-    flexDirection: "row",
-
-    justifyContent: "space-between",
-
-    alignItems: "center",
-
-    paddingHorizontal: 20,
-  },
-
-
-  voltar: {
-    width: 40,
-    height: 40,
-
-    justifyContent: "center",
-
-    alignItems: "center",
-  },
-
-
-  icon: {
-    width: 28,
-    height: 28,
-
-    resizeMode: "contain",
-  },
-
-
-  tituloHeader: {
-    fontSize: 26,
-    fontWeight: "bold",
-    color: "#007A33",
-  },
-
-
-  espaco: {
-    width: 40,
   },
 
   btn: {
@@ -135,4 +136,5 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontWeight: "bold"
   }
+
 });

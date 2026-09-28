@@ -85,7 +85,7 @@ export default function LoginUsuarioScreen({ navigation }) {
 
 
       navigation.replace("Home", {
-        usuario: data
+        usuario: data.usuario,
       });
 
 

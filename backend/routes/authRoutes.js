@@ -26,12 +26,10 @@ const gerarIdUsuario = () => {
         return;
       }
 
-
       if (results.length === 0) {
         resolve("U001");
         return;
       }
-
 
       const ultimoId = results[0].idUsuario;
 
@@ -40,14 +38,11 @@ const gerarIdUsuario = () => {
         10
       );
 
-
       const novoNumero = numero + 1;
-
 
       const novoId =
         "U" +
         String(novoNumero).padStart(3, "0");
-
 
       resolve(novoId);
 
@@ -75,7 +70,7 @@ router.post("/cadastro", async (req, res) => {
 
 
     // ----------------------------------------------
-    // VERIFICAR CAMPOS OBRIGATÓRIOS
+    // VERIFICAR CAMPOS
     // ----------------------------------------------
 
     if (
@@ -109,23 +104,8 @@ router.post("/cadastro", async (req, res) => {
 
     // ----------------------------------------------
     // VALIDAR MATRÍCULA
+    // Exemplo: 20241TDS-JG0165
     // ----------------------------------------------
-
-    /*
-      Formato da matrícula do campus:
-
-      AAAA + SEMESTRE + CURSO + CAMPUS + NÚMEROS
-
-      Exemplo:
-
-      20241TDS-JG0165
-
-      2024 = ano de entrada
-      1    = semestre
-      TDS  = curso
-      JG   = campus
-      0165 = número do aluno
-    */
 
     const formatoMatricula =
       /^\d{5}[A-Z]{3}-[A-Z]{2}\d{4}$/;
@@ -170,7 +150,7 @@ router.post("/cadastro", async (req, res) => {
 
 
     // ----------------------------------------------
-    // VERIFICAR SE O EMAIL JÁ EXISTE
+    // VERIFICAR EMAIL EXISTENTE
     // ----------------------------------------------
 
     const verificarEmail = `
@@ -179,7 +159,6 @@ router.post("/cadastro", async (req, res) => {
       WHERE email = ?
       LIMIT 1
     `;
-
 
     const emailExistente =
       await new Promise((resolve, reject) => {
@@ -213,7 +192,7 @@ router.post("/cadastro", async (req, res) => {
 
 
     // ----------------------------------------------
-    // VERIFICAR SE A MATRÍCULA JÁ EXISTE
+    // VERIFICAR MATRÍCULA EXISTENTE
     // ----------------------------------------------
 
     const verificarMatricula = `
@@ -222,7 +201,6 @@ router.post("/cadastro", async (req, res) => {
       WHERE matricula = ?
       LIMIT 1
     `;
-
 
     const matriculaExistente =
       await new Promise((resolve, reject) => {
@@ -256,7 +234,7 @@ router.post("/cadastro", async (req, res) => {
 
 
     // ----------------------------------------------
-    // GERAR ID DO USUÁRIO
+    // GERAR ID
     // ----------------------------------------------
 
     const idUsuario =
@@ -264,7 +242,7 @@ router.post("/cadastro", async (req, res) => {
 
 
     // ----------------------------------------------
-    // CADASTRAR USUÁRIO
+    // INSERIR USUÁRIO
     // ----------------------------------------------
 
     const sql = `
@@ -298,7 +276,6 @@ router.post("/cadastro", async (req, res) => {
             "Erro ao cadastrar usuário:",
             err
           );
-
 
           return res.status(500).json({
             message:
@@ -334,7 +311,6 @@ router.post("/cadastro", async (req, res) => {
       error
     );
 
-
     return res.status(500).json({
       message:
         "Erro interno do servidor."
@@ -357,6 +333,10 @@ router.post("/login", (req, res) => {
   } = req.body;
 
 
+  // ----------------------------------------------
+  // VERIFICAR CAMPOS
+  // ----------------------------------------------
+
   if (!email || !senha) {
 
     return res.status(400).json({
@@ -366,6 +346,10 @@ router.post("/login", (req, res) => {
 
   }
 
+
+  // ----------------------------------------------
+  // BUSCAR USUÁRIO
+  // ----------------------------------------------
 
   const sql = `
     SELECT
@@ -393,7 +377,6 @@ router.post("/login", (req, res) => {
           err
         );
 
-
         return res.status(500).json({
           message:
             "Erro ao realizar login."
@@ -401,6 +384,10 @@ router.post("/login", (req, res) => {
 
       }
 
+
+      // ----------------------------------------------
+      // USUÁRIO NÃO ENCONTRADO
+      // ----------------------------------------------
 
       if (results.length === 0) {
 
@@ -415,6 +402,10 @@ router.post("/login", (req, res) => {
       const usuario = results[0];
 
 
+      // ----------------------------------------------
+      // VERIFICAR SENHA
+      // ----------------------------------------------
+
       if (usuario.senha !== senha) {
 
         return res.status(401).json({
@@ -426,7 +417,7 @@ router.post("/login", (req, res) => {
 
 
       // ----------------------------------------------
-      // IMPEDIR ADMINISTRADOR NO LOGIN COMUM
+      // BLOQUEAR ADMIN NO LOGIN COMUM
       // ----------------------------------------------
 
       if (
@@ -442,12 +433,17 @@ router.post("/login", (req, res) => {
       }
 
 
+      // ----------------------------------------------
+      // LOGIN REALIZADO
+      // ----------------------------------------------
+
       return res.status(200).json({
 
         message:
           "Login realizado com sucesso.",
 
         usuario: {
+
           idUsuario:
             usuario.idUsuario,
 

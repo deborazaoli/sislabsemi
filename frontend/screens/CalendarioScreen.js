@@ -9,7 +9,7 @@ import {
   Alert,
   Pressable,
   Image,
-  Dimensions,
+  Modal,
 } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -33,6 +33,7 @@ const MESES = [
   "Novembro",
   "Dezembro"
 ];
+
 
 const DIAS_SEMANA = [
   "Dom",
@@ -60,6 +61,10 @@ export default function CalendarioScreen({ navigation }) {
     hoje.getFullYear()
   );
 
+  const [modalVisivel, setModalVisivel] = useState(false);
+  const [diaSelecionado, setDiaSelecionado] = useState(null);
+  const [reservasSelecionadas, setReservasSelecionadas] = useState([]);
+
 
   async function carregarReservas() {
 
@@ -72,9 +77,11 @@ export default function CalendarioScreen({ navigation }) {
       );
 
       if (!resposta.ok) {
+
         throw new Error(
           "Não foi possível carregar as reservas."
         );
+
       }
 
       const dados = await resposta.json();
@@ -109,9 +116,6 @@ export default function CalendarioScreen({ navigation }) {
   );
 
 
-  /*
-   * Quantos dias tem o mês atual
-   */
   const quantidadeDias = new Date(
     anoAtual,
     mesAtual + 1,
@@ -119,13 +123,6 @@ export default function CalendarioScreen({ navigation }) {
   ).getDate();
 
 
-  /*
-   * Dia da semana em que o mês começa
-   *
-   * 0 = domingo
-   * 1 = segunda
-   * ...
-   */
   const primeiroDia = new Date(
     anoAtual,
     mesAtual,
@@ -133,9 +130,6 @@ export default function CalendarioScreen({ navigation }) {
   ).getDay();
 
 
-  /*
-   * Cria os bloquinhos do calendário
-   */
   const dias = useMemo(() => {
 
     const lista = [];
@@ -161,10 +155,6 @@ export default function CalendarioScreen({ navigation }) {
     quantidadeDias
   ]);
 
-
-  /*
-   * Avança um mês
-   */
   function proximoMes() {
 
     if (mesAtual === 11) {
@@ -181,9 +171,6 @@ export default function CalendarioScreen({ navigation }) {
   }
 
 
-  /*
-   * Volta um mês
-   */
   function mesAnterior() {
 
     if (mesAtual === 0) {
@@ -200,9 +187,6 @@ export default function CalendarioScreen({ navigation }) {
   }
 
 
-  /*
-   * Volta para o mês atual
-   */
   function irParaHoje() {
 
     const agora = new Date();
@@ -213,11 +197,6 @@ export default function CalendarioScreen({ navigation }) {
   }
 
 
-  /*
-   * Transforma a data da reserva em:
-   *
-   * YYYY-MM-DD
-   */
   function obterDataReserva(reserva) {
 
     if (!reserva.reservaData) {
@@ -232,37 +211,44 @@ export default function CalendarioScreen({ navigation }) {
   }
 
 
-  /*
-   * Retorna todas as reservas de determinado dia
-   */
   function reservasDoDia(dia) {
 
-    if (!dia) {
-      return [];
-    }
-
-    const mesFormatado = String(
-      mesAtual + 1
-    ).padStart(2, "0");
-
-    const diaFormatado = String(
-      dia
-    ).padStart(2, "0");
-
-    const dataAtual =
-      `${anoAtual}-${mesFormatado}-${diaFormatado}`;
-
-    return reservas.filter(
-      (reserva) =>
-        obterDataReserva(reserva) === dataAtual
-    );
-
+  if (!dia) {
+    return [];
   }
 
+  const mesFormatado = String(
+    mesAtual + 1
+  ).padStart(2, "0");
 
-  /*
-   * Verifica se o dia é hoje
-   */
+  const diaFormatado = String(
+    dia
+  ).padStart(2, "0");
+
+  const dataAtual =
+    `${anoAtual}-${mesFormatado}-${diaFormatado}`;
+
+  return reservas
+    .filter(
+      (reserva) =>
+        obterDataReserva(reserva) === dataAtual
+    )
+    .sort((a, b) => {
+
+      const horaA = String(
+        a.horaRetirada || ""
+      );
+
+      const horaB = String(
+        b.horaRetirada || ""
+      );
+
+      return horaA.localeCompare(horaB);
+
+    });
+
+}
+
   function ehHoje(dia) {
 
     if (!dia) {
@@ -279,10 +265,6 @@ export default function CalendarioScreen({ navigation }) {
 
   }
 
-
-  /*
-   * Formata horário
-   */
   function formatarHora(hora) {
 
     if (!hora) {
@@ -293,10 +275,35 @@ export default function CalendarioScreen({ navigation }) {
 
   }
 
+  function abrirReservasDoDia(dia) {
 
-  /*
-   * Tela de carregamento
-   */
+    if (!dia) {
+      return;
+    }
+
+    const reservasDia =
+      reservasDoDia(dia);
+
+    // Se não houver reservas, não abre o modal
+    if (reservasDia.length === 0) {
+      return;
+    }
+
+    setDiaSelecionado(dia);
+    setReservasSelecionadas(reservasDia);
+    setModalVisivel(true);
+
+  }
+
+  function fecharModal() {
+
+    setModalVisivel(false);
+    setDiaSelecionado(null);
+    setReservasSelecionadas([]);
+
+  }
+
+
   if (carregando) {
 
     return (
@@ -317,19 +324,23 @@ export default function CalendarioScreen({ navigation }) {
 
           </Pressable>
 
+
           <Text style={styles.tituloHeader}>
             Calendário
           </Text>
 
+
           <View style={styles.espaco} />
 
         </View>
+
 
         <View style={styles.loading}>
 
           <ActivityIndicator
             size="large"
           />
+
 
           <Text style={styles.loadingText}>
             Carregando reservas...
@@ -348,7 +359,9 @@ export default function CalendarioScreen({ navigation }) {
 
     <SafeAreaView style={styles.container}>
 
-      {/* HEADER */}
+      {/* ==================================================
+          HEADER
+      ================================================== */}
 
       <View style={styles.header}>
 
@@ -375,7 +388,9 @@ export default function CalendarioScreen({ navigation }) {
       </View>
 
 
-      {/* CONTEÚDO */}
+      {/* ==================================================
+          CONTEÚDO
+      ================================================== */}
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -383,7 +398,9 @@ export default function CalendarioScreen({ navigation }) {
       >
 
 
-        {/* CABEÇALHO DO MÊS */}
+        {/* ==================================================
+            CABEÇALHO DO MÊS
+        ================================================== */}
 
         <View style={styles.mesHeader}>
 
@@ -421,7 +438,9 @@ export default function CalendarioScreen({ navigation }) {
         </View>
 
 
-        {/* BOTÃO HOJE */}
+        {/* ==================================================
+            BOTÃO HOJE
+        ================================================== */}
 
         <Pressable
           style={styles.botaoHoje}
@@ -435,7 +454,9 @@ export default function CalendarioScreen({ navigation }) {
         </Pressable>
 
 
-        {/* CALENDÁRIO */}
+        {/* ==================================================
+            CALENDÁRIO
+        ================================================== */}
 
         <View style={styles.calendario}>
 
@@ -475,15 +496,29 @@ export default function CalendarioScreen({ navigation }) {
                 const reservasDia =
                   reservasDoDia(dia);
 
+                const quantidadeReservas =
+                  reservasDia.length;
+
                 return (
 
-                  <View
+                  <Pressable
                     key={index}
                     style={[
                       styles.dia,
+
                       ehHoje(dia) &&
-                      styles.diaHoje
+                      styles.diaHoje,
+
+                      quantidadeReservas > 0 &&
+                      styles.diaComReserva
                     ]}
+                    onPress={() =>
+                      abrirReservasDoDia(dia)
+                    }
+                    disabled={
+                      !dia ||
+                      quantidadeReservas === 0
+                    }
                   >
 
                     {dia && (
@@ -495,6 +530,7 @@ export default function CalendarioScreen({ navigation }) {
                         <View
                           style={[
                             styles.numeroContainer,
+
                             ehHoje(dia) &&
                             styles.numeroHoje
                           ]}
@@ -503,89 +539,61 @@ export default function CalendarioScreen({ navigation }) {
                           <Text
                             style={[
                               styles.numeroDia,
+
                               ehHoje(dia) &&
                               styles.numeroDiaHoje
                             ]}
                           >
+
                             {dia}
+
                           </Text>
 
                         </View>
 
 
-                        {/* RESERVAS */}
+                        {/* QUANTIDADE DE RESERVAS */}
 
-                        <ScrollView
-                          nestedScrollEnabled
-                          showsVerticalScrollIndicator={
-                            false
-                          }
-                          style={
-                            styles.reservasDia
-                          }
-                        >
+                        {quantidadeReservas > 0 && (
 
-                          {reservasDia.map(
-                            (reserva) => (
+                          <View
+                            style={
+                              styles.contadorReservas
+                            }
+                          >
 
-                              <View
-                                key={
-                                  reserva.idReserva
-                                }
-                                style={
-                                  styles.reserva
-                                }
-                              >
+                            <Text
+                              style={
+                                styles.numeroReservas
+                              }
+                            >
 
-                                <Text
-                                  style={
-                                    styles.reservaRecurso
-                                  }
-                                  numberOfLines={2}
-                                >
+                              {quantidadeReservas}
 
-                                  {
-                                    reserva.nomeRecurso ||
-                                    "Recurso"
-                                  }
-
-                                </Text>
+                            </Text>
 
 
-                                <Text
-                                  style={
-                                    styles.reservaHora
-                                  }
-                                >
+                            <Text
+                              style={
+                                styles.textoReservas
+                              }
+                            >
 
-                                  {
-                                    formatarHora(
-                                      reserva.horaRetirada
-                                    )
-                                  }
+                              {quantidadeReservas === 1
+                                ? "reserva"
+                                : "reservas"}
 
-                                  {" - "}
+                            </Text>
 
-                                  {
-                                    formatarHora(
-                                      reserva.horaDevolucao
-                                    )
-                                  }
+                          </View>
 
-                                </Text>
-
-                              </View>
-
-                            )
-                          )}
-
-                        </ScrollView>
+                        )}
 
                       </>
 
                     )}
 
-                  </View>
+                  </Pressable>
 
                 );
 
@@ -597,7 +605,9 @@ export default function CalendarioScreen({ navigation }) {
         </View>
 
 
-        {/* LEGENDA */}
+        {/* ==================================================
+            LEGENDA
+        ================================================== */}
 
         <View style={styles.legenda}>
 
@@ -605,22 +615,214 @@ export default function CalendarioScreen({ navigation }) {
 
             <View style={styles.legendaCor} />
 
+
             <Text style={styles.legendaTexto}>
-              Reserva
+              Dia com reservas
             </Text>
 
           </View>
 
 
           <Text style={styles.info}>
-            Toque em outro mês para consultar
-            as reservas.
+            Toque em um dia com reservas para
+            visualizar os detalhes.
           </Text>
 
         </View>
 
 
       </ScrollView>
+
+
+      {/* ==================================================
+          MODAL DE RESERVAS
+      ================================================== */}
+
+      <Modal
+        visible={modalVisivel}
+        transparent
+        animationType="fade"
+        onRequestClose={fecharModal}
+      >
+
+        <View style={styles.modalFundo}>
+
+          <View style={styles.modal}>
+
+            {/* CABEÇALHO DO MODAL */}
+
+            <View style={styles.modalHeader}>
+
+              <View>
+
+                <Text style={styles.modalTitulo}>
+                  Reservas do dia
+                </Text>
+
+
+                <Text style={styles.modalData}>
+
+                  {diaSelecionado} de{" "}
+                  {MESES[mesAtual]}{" "}
+                  {anoAtual}
+
+                </Text>
+
+              </View>
+
+
+              <Pressable
+                style={styles.fechar}
+                onPress={fecharModal}
+              >
+
+                <Text style={styles.fecharTexto}>
+                  ×
+                </Text>
+
+              </Pressable>
+
+            </View>
+
+
+            {/* QUANTIDADE */}
+
+            <View style={styles.totalReservas}>
+
+              <Text style={styles.totalNumero}>
+                {reservasSelecionadas.length}
+              </Text>
+
+
+              <Text style={styles.totalTexto}>
+
+                {reservasSelecionadas.length === 1
+                  ? "reserva encontrada"
+                  : "reservas encontradas"}
+
+              </Text>
+
+            </View>
+
+
+            {/* LISTA */}
+
+            <ScrollView
+              style={styles.listaModal}
+              showsVerticalScrollIndicator={false}
+            >
+
+              {reservasSelecionadas.map(
+                (reserva) => (
+
+                  <View
+                    key={reserva.idReserva}
+                    style={styles.reservaModal}
+                  >
+
+                    {/* RECURSO */}
+
+                    <Text
+                      style={styles.recursoModal}
+                    >
+
+                      {reserva.nomeRecurso ||
+                        "Recurso não informado"}
+
+                    </Text>
+
+
+                    {/* HORÁRIO */}
+
+                    <Text
+                      style={styles.horarioModal}
+                    >
+
+                      {formatarHora(
+                        reserva.horaRetirada
+                      )}
+
+                      {" - "}
+
+                      {formatarHora(
+                        reserva.horaDevolucao
+                      )}
+
+                    </Text>
+
+
+                    {/* RESPONSÁVEL */}
+
+                    <Text
+                      style={styles.responsavelModal}
+                    >
+
+                      Responsável:{" "}
+                      {reserva.responsavelNome ||
+                        "Não informado"}
+
+                    </Text>
+
+
+                    {/* MATRÍCULA */}
+
+                    {reserva.responsavelMatricula && (
+
+                      <Text
+                        style={styles.matriculaModal}
+                      >
+
+                        Matrícula:{" "}
+                        {reserva.responsavelMatricula}
+
+                      </Text>
+
+                    )}
+
+
+                    {/* CÓDIGO */}
+
+                    {reserva.codigoReserva && (
+
+                      <Text
+                        style={styles.codigoModal}
+                      >
+
+                        Código:{" "}
+                        {reserva.codigoReserva}
+
+                      </Text>
+
+                    )}
+
+                  </View>
+
+                )
+              )}
+
+            </ScrollView>
+
+
+            {/* BOTÃO FECHAR */}
+
+            <Pressable
+              style={styles.botaoFecharModal}
+              onPress={fecharModal}
+            >
+
+              <Text
+                style={styles.textoBotaoFechar}
+              >
+                Fechar
+              </Text>
+
+            </Pressable>
+
+          </View>
+
+        </View>
+
+      </Modal>
 
     </SafeAreaView>
 
@@ -631,44 +833,35 @@ export default function CalendarioScreen({ navigation }) {
 
 const styles = StyleSheet.create({
 
-  /* TELA */
-
   container: {
     flex: 1,
     backgroundColor: "#CCFCE4",
   },
 
 
-  /* HEADER */
+  // ======================================================
+  // HEADER
+  // ======================================================
 
   header: {
-    height: 75,
+    height: 65,
     backgroundColor: "#FFF",
-
     flexDirection: "row",
-
     justifyContent: "space-between",
-
     alignItems: "center",
-
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
   },
-
 
   voltar: {
     width: 40,
     height: 40,
-
     justifyContent: "center",
-
     alignItems: "center",
   },
-
 
   icon: {
     width: 28,
     height: 28,
-
     resizeMode: "contain",
   },
 
@@ -679,38 +872,28 @@ const styles = StyleSheet.create({
     color: "#007A33",
   },
 
-
   espaco: {
-    width: 40,
+    width: 20,
   },
 
-
-  /* CONTEÚDO */
-
+  // CONTEÚDO
   content: {
     padding: 15,
     paddingBottom: 30,
   },
 
-
-  /* MÊS */
-
+  // MÊS
   mesHeader: {
     flexDirection: "row",
-
     alignItems: "center",
-
     justifyContent: "space-between",
-
     marginBottom: 10,
   },
 
 
   mesTitulo: {
     fontSize: 23,
-
     fontWeight: "bold",
-
     color: "#007A33",
   },
 
@@ -720,25 +903,16 @@ const styles = StyleSheet.create({
     height: 42,
 
     borderRadius: 21,
-
     backgroundColor: "#FFF",
-
     justifyContent: "center",
-
     alignItems: "center",
   },
 
-
   seta: {
     fontSize: 32,
-
     color: "#007A33",
-
     lineHeight: 34,
   },
-
-
-  /* BOTÃO HOJE */
 
   botaoHoje: {
     alignSelf: "center",
@@ -761,9 +935,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 
-
-  /* CALENDÁRIO */
-
   calendario: {
     backgroundColor: "#FFF",
 
@@ -776,8 +947,6 @@ const styles = StyleSheet.create({
     borderColor: "#DDEEE5",
   },
 
-
-  /* SEMANA */
 
   semana: {
     flexDirection: "row",
@@ -809,52 +978,37 @@ const styles = StyleSheet.create({
     color: "#555",
   },
 
-
-  /* GRADE */
-
   grade: {
     flexDirection: "row",
-
     flexWrap: "wrap",
   },
 
 
   dia: {
     width: `${100 / 7}%`,
-
     minHeight: 100,
-
     borderRightWidth: 1,
-
     borderBottomWidth: 1,
-
     borderColor: "#E5E5E5",
-
     padding: 5,
-
     backgroundColor: "#FFF",
   },
-
 
   diaHoje: {
     backgroundColor: "#F0FFF6",
   },
 
-
-  /* NÚMERO */
+  diaComReserva: {
+    backgroundColor: "#F8FFFB",
+  },
 
   numeroContainer: {
     width: 27,
-
     height: 27,
-
     borderRadius: 14,
-
     justifyContent: "center",
-
     alignItems: "center",
-
-    marginBottom: 3,
+    marginBottom: 7,
   },
 
 
@@ -876,48 +1030,31 @@ const styles = StyleSheet.create({
     color: "#FFF",
   },
 
-
-  /* RESERVAS DENTRO DO DIA */
-
-  reservasDia: {
-    flex: 1,
-  },
-
-
-  reserva: {
+  // CONTADOR DE RESERVAS
+  contadorReservas: {
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "#CCFCE4",
-
+    borderRadius: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 3,
     borderLeftWidth: 3,
-
     borderLeftColor: "#007A33",
-
-    borderRadius: 4,
-
-    padding: 4,
-
-    marginBottom: 3,
   },
 
-
-  reservaRecurso: {
-    fontSize: 10,
-
+  numeroReservas: {
+    fontSize: 17,
     fontWeight: "bold",
-
-    color: "#00652A",
+    color: "#007A33",
   },
 
 
-  reservaHora: {
+  textoReservas: {
     fontSize: 9,
-
-    color: "#333",
-
-    marginTop: 2,
+    fontWeight: "600",
+    color: "#00652A",
+    marginTop: 1,
   },
-
-
-  /* LEGENDA */
 
   legenda: {
     marginTop: 15,
@@ -971,14 +1108,9 @@ const styles = StyleSheet.create({
     color: "#777",
   },
 
-
-  /* LOADING */
-
   loading: {
     flex: 1,
-
     justifyContent: "center",
-
     alignItems: "center",
   },
 
@@ -987,6 +1119,207 @@ const styles = StyleSheet.create({
     marginTop: 10,
 
     fontSize: 15,
+  },
+
+  modalFundo: {
+    flex: 1,
+
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+
+    justifyContent: "center",
+
+    alignItems: "center",
+
+    padding: 20,
+  },
+
+
+  modal: {
+    width: "100%",
+
+    maxWidth: 500,
+
+    maxHeight: "85%",
+
+    backgroundColor: "#FFF",
+
+    borderRadius: 18,
+
+    padding: 20,
+  },
+
+
+  modalHeader: {
+    flexDirection: "row",
+
+    justifyContent: "space-between",
+
+    alignItems: "flex-start",
+
+    marginBottom: 15,
+  },
+
+
+  modalTitulo: {
+    fontSize: 22,
+
+    fontWeight: "bold",
+
+    color: "#007A33",
+  },
+
+
+  modalData: {
+    fontSize: 14,
+
+    color: "#666",
+
+    marginTop: 3,
+  },
+
+
+  fechar: {
+    width: 38,
+
+    height: 38,
+
+    borderRadius: 19,
+
+    backgroundColor: "#F2F2F2",
+
+    justifyContent: "center",
+
+    alignItems: "center",
+  },
+
+
+  fecharTexto: {
+    fontSize: 27,
+
+    color: "#555",
+
+    lineHeight: 29,
+  },
+
+  totalReservas: {
+    flexDirection: "row",
+
+    alignItems: "center",
+
+    backgroundColor: "#F0FFF6",
+
+    borderRadius: 10,
+
+    padding: 12,
+
+    marginBottom: 12,
+  },
+
+
+  totalNumero: {
+    fontSize: 22,
+
+    fontWeight: "bold",
+
+    color: "#007A33",
+
+    marginRight: 7,
+  },
+
+
+  totalTexto: {
+    fontSize: 14,
+
+    color: "#444",
+  },
+
+
+  listaModal: {
+    marginBottom: 12,
+  },
+
+
+  reservaModal: {
+    backgroundColor: "#F7FFFA",
+
+    borderLeftWidth: 4,
+
+    borderLeftColor: "#007A33",
+
+    borderRadius: 10,
+
+    padding: 13,
+
+    marginBottom: 10,
+  },
+
+
+  recursoModal: {
+    fontSize: 16,
+
+    fontWeight: "bold",
+
+    color: "#00652A",
+
+    marginBottom: 5,
+  },
+
+
+  horarioModal: {
+    fontSize: 15,
+
+    fontWeight: "600",
+
+    color: "#222",
+
+    marginBottom: 7,
+  },
+
+
+  responsavelModal: {
+    fontSize: 13,
+
+    color: "#555",
+
+    marginBottom: 3,
+  },
+
+
+  matriculaModal: {
+    fontSize: 13,
+
+    color: "#555",
+
+    marginBottom: 3,
+  },
+
+
+  codigoModal: {
+    fontSize: 12,
+
+    color: "#777",
+
+    marginTop: 3,
+  },
+
+
+  botaoFecharModal: {
+    backgroundColor: "#007A33",
+
+    borderRadius: 10,
+
+    paddingVertical: 13,
+
+    alignItems: "center",
+  },
+
+
+  textoBotaoFechar: {
+    color: "#FFF",
+
+    fontSize: 16,
+
+    fontWeight: "bold",
   },
 
 });
