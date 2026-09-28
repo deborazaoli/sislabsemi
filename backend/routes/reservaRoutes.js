@@ -9,11 +9,15 @@ function gerarCodigoReserva() {
   let codigo = "";
 
   for (let i = 0; i < 3; i++) {
-    codigo += letras[Math.floor(Math.random() * letras.length)];
+    codigo += letras[
+      Math.floor(Math.random() * letras.length)
+    ];
   }
 
   for (let i = 0; i < 3; i++) {
-    codigo += numeros[Math.floor(Math.random() * numeros.length)];
+    codigo += numeros[
+      Math.floor(Math.random() * numeros.length)
+    ];
   }
 
   return codigo;
@@ -24,18 +28,12 @@ function converterHoraParaMinutos(hora) {
 
   const partes = String(hora).split(":");
 
-  if (partes.length < 2) return null;
-
   const horas = Number(partes[0]);
   const minutos = Number(partes[1]);
 
   if (
-    !Number.isInteger(horas) ||
-    !Number.isInteger(minutos) ||
-    horas < 0 ||
-    horas > 23 ||
-    minutos < 0 ||
-    minutos > 59
+    Number.isNaN(horas) ||
+    Number.isNaN(minutos)
   ) {
     return null;
   }
@@ -72,35 +70,35 @@ function validarDataEHorario(
   horaRetirada,
   horaDevolucao
 ) {
-  const agora = obterAgoraBrasil();
-
-  if (reservaData < agora.data) {
+  if (!reservaData || !horaRetirada || !horaDevolucao) {
     return {
       valido: false,
-      message:
-        "Não é possível fazer uma reserva para uma data passada."
+      message: "Informe a data e os horários da reserva."
     };
   }
 
-  const retirada = converterHoraParaMinutos(
+  const agoraBrasil = obterAgoraBrasil();
+
+  const inicio = converterHoraParaMinutos(
     horaRetirada
   );
 
-  const devolucao = converterHoraParaMinutos(
+  const fim = converterHoraParaMinutos(
     horaDevolucao
   );
 
-  if (
-    retirada === null ||
-    devolucao === null
-  ) {
+  const agora = converterHoraParaMinutos(
+    agoraBrasil.hora
+  );
+
+  if (inicio === null || fim === null) {
     return {
       valido: false,
       message: "Informe horários válidos."
     };
   }
 
-  if (devolucao <= retirada) {
+  if (fim <= inicio) {
     return {
       valido: false,
       message:
@@ -108,7 +106,7 @@ function validarDataEHorario(
     };
   }
 
-  const duracao = devolucao - retirada;
+  const duracao = fim - inicio;
 
   if (duracao < 30) {
     return {
@@ -118,18 +116,23 @@ function validarDataEHorario(
     };
   }
 
-  if (reservaData === agora.data) {
-    const horaAtual = converterHoraParaMinutos(
-      agora.hora
-    );
+  if (reservaData < agoraBrasil.data) {
+    return {
+      valido: false,
+      message:
+        "Não é possível fazer uma reserva para uma data passada."
+    };
+  }
 
-    if (retirada < horaAtual) {
-      return {
-        valido: false,
-        message:
-          "A hora de retirada já passou. Escolha um horário futuro."
-      };
-    }
+  if (
+    reservaData === agoraBrasil.data &&
+    inicio <= agora
+  ) {
+    return {
+      valido: false,
+      message:
+        "A hora de retirada já passou. Escolha um horário futuro."
+    };
   }
 
   return {
@@ -155,7 +158,11 @@ router.get("/all", (req, res) => {
 
   db.query(sql, (err, result) => {
     if (err) {
-      return res.status(500).json(err);
+      console.log("Erro ao buscar reservas:", err);
+
+      return res.status(500).json({
+        message: "Erro ao buscar reservas."
+      });
     }
 
     res.json(result);
@@ -164,9 +171,17 @@ router.get("/all", (req, res) => {
 
 router.get("/usuario/:id", (req, res) => {
   const sql = `
-    SELECT * FROM reserva
-    WHERE idUsuario = ?
-    ORDER BY reservaData DESC
+    SELECT
+      reserva.*,
+      recurso.nome AS nomeRecurso,
+      recurso.tipoRecurso
+    FROM reserva
+    INNER JOIN recurso
+      ON reserva.idRecurso = recurso.idRecurso
+    WHERE reserva.idUsuario = ?
+    ORDER BY
+      reserva.reservaData DESC,
+      reserva.horaRetirada DESC
   `;
 
   db.query(
@@ -174,7 +189,15 @@ router.get("/usuario/:id", (req, res) => {
     [req.params.id],
     (err, result) => {
       if (err) {
-        return res.status(500).json(err);
+        console.log(
+          "Erro ao buscar reservas do usuário:",
+          err
+        );
+
+        return res.status(500).json({
+          message:
+            "Erro ao buscar reservas do usuário."
+        });
       }
 
       res.json(result);
@@ -219,76 +242,198 @@ router.post("/", (req, res) => {
     });
   }
 
-  const sqlConflito = `
-    SELECT *
-    FROM reserva
+  const sqlRecurso = `
+    SELECT
+      idRecurso,
+      nome,
+      tipoRecurso,
+      statusRecurso
+    FROM recurso
     WHERE idRecurso = ?
-      AND reservaData = ?
-      AND statusReserva <> 'cancelada'
-      AND (? < horaDevolucao AND ? > horaRetirada)
   `;
 
   db.query(
-    sqlConflito,
-    [
-      idRecurso,
-      reservaData,
-      horaRetirada,
-      horaDevolucao
-    ],
-    (err, conflito) => {
+    sqlRecurso,
+    [idRecurso],
+    (err, recursos) => {
       if (err) {
-        return res.status(500).json(err);
-      }
+        console.log(
+          "Erro ao verificar recurso:",
+          err
+        );
 
-      if (conflito.length > 0) {
-        return res.status(409).json({
-          message:
-            "Já existe uma reserva para este recurso nesse horário."
+        return res.status(500).json({
+          message: "Erro ao verificar o recurso."
         });
       }
 
-      const codigoReserva =
-        gerarCodigoReserva();
+      if (recursos.length === 0) {
+        return res.status(404).json({
+          message: "Recurso não encontrado."
+        });
+      }
 
-      const sql = `
-        INSERT INTO reserva (
-          codigoReserva,
-          responsavelNome,
-          responsavelMatricula,
-          reservaData,
-          horaRetirada,
-          horaDevolucao,
-          statusReserva,
+      const recurso = recursos[0];
+
+      if (recurso.statusRecurso !== "disponivel") {
+        return res.status(400).json({
+          message:
+            "Este recurso não está disponível para reserva."
+        });
+      }
+
+      const sqlUsuario = `
+        SELECT
           idUsuario,
-          idRecurso
-        )
-        VALUES (?, ?, ?, ?, ?, ?, 'ativa', ?, ?)
+          nome,
+          matricula,
+          email,
+          tipoUsuario
+        FROM usuario
+        WHERE idUsuario = ?
       `;
 
       db.query(
-        sql,
-        [
-          codigoReserva,
-          responsavelNome,
-          responsavelMatricula,
-          reservaData,
-          horaRetirada,
-          horaDevolucao,
-          idUsuario,
-          idRecurso
-        ],
-        (err, result) => {
+        sqlUsuario,
+        [idUsuario],
+        (err, usuarios) => {
           if (err) {
-            return res.status(500).json(err);
+            console.log(
+              "Erro ao verificar usuário:",
+              err
+            );
+
+            return res.status(500).json({
+              message: "Erro ao verificar o usuário."
+            });
           }
 
-          res.status(201).json({
-            message:
-              "Reserva criada com sucesso.",
-            idReserva: result.insertId,
-            codigoReserva
-          });
+          if (usuarios.length === 0) {
+            return res.status(404).json({
+              message: "Usuário não encontrado."
+            });
+          }
+
+          const usuario = usuarios[0];
+
+          if (
+            String(usuario.nome).trim() !==
+              String(responsavelNome).trim() ||
+            String(usuario.matricula || "")
+              .trim()
+              .toUpperCase() !==
+              String(responsavelMatricula)
+                .trim()
+                .toUpperCase()
+          ) {
+            return res.status(400).json({
+              message:
+                "Os dados do responsável não correspondem ao usuário logado."
+            });
+          }
+
+          const sqlConflito = `
+            SELECT
+              idReserva,
+              codigoReserva,
+              responsavelNome,
+              reservaData,
+              horaRetirada,
+              horaDevolucao
+            FROM reserva
+            WHERE
+              idRecurso = ?
+              AND reservaData = ?
+              AND statusReserva = 'ativa'
+              AND (
+                ? < horaDevolucao
+                AND ? > horaRetirada
+              )
+          `;
+
+          db.query(
+            sqlConflito,
+            [
+              idRecurso,
+              reservaData,
+              horaRetirada,
+              horaDevolucao
+            ],
+            (err, conflito) => {
+              if (err) {
+                console.log(
+                  "Erro ao verificar conflito:",
+                  err
+                );
+
+                return res.status(500).json({
+                  message:
+                    "Erro ao verificar disponibilidade do recurso."
+                });
+              }
+
+              if (conflito.length > 0) {
+                return res.status(409).json({
+                  message:
+                    "Já existe uma reserva para este recurso nesse horário."
+                });
+              }
+
+              const codigoReserva =
+                gerarCodigoReserva();
+
+              const sql = `
+                INSERT INTO reserva (
+                  codigoReserva,
+                  responsavelNome,
+                  responsavelMatricula,
+                  reservaData,
+                  horaRetirada,
+                  horaDevolucao,
+                  statusReserva,
+                  idUsuario,
+                  idRecurso
+                )
+                VALUES (
+                  ?, ?, ?, ?, ?, ?, 'ativa', ?, ?
+                )
+              `;
+
+              db.query(
+                sql,
+                [
+                  codigoReserva,
+                  responsavelNome,
+                  responsavelMatricula,
+                  reservaData,
+                  horaRetirada,
+                  horaDevolucao,
+                  idUsuario,
+                  idRecurso
+                ],
+                (err, result) => {
+                  if (err) {
+                    console.log(
+                      "Erro ao criar reserva:",
+                      err
+                    );
+
+                    return res.status(500).json({
+                      message:
+                        "Erro ao criar a reserva."
+                    });
+                  }
+
+                  res.status(201).json({
+                    message:
+                      "Reserva criada com sucesso.",
+                    idReserva: result.insertId,
+                    codigoReserva
+                  });
+                }
+              );
+            }
+          );
         }
       );
     }
@@ -305,13 +450,26 @@ router.put("/cancelar/:id", (req, res) => {
   db.query(
     sql,
     [req.params.id],
-    (err) => {
+    (err, result) => {
       if (err) {
-        return res.status(500).json(err);
+        console.log(
+          "Erro ao cancelar reserva:",
+          err
+        );
+
+        return res.status(500).json({
+          message: "Erro ao cancelar a reserva."
+        });
+      }
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({
+          message: "Reserva não encontrada."
+        });
       }
 
       res.json({
-        message: "Reserva cancelada"
+        message: "Reserva cancelada."
       });
     }
   );
@@ -347,52 +505,81 @@ router.put("/:id", (req, res) => {
     });
   }
 
-  const sqlBusca = `
-    SELECT idRecurso
+  const idReserva = req.params.id;
+
+  const sqlReserva = `
+    SELECT
+      idReserva,
+      idRecurso,
+      statusReserva
     FROM reserva
     WHERE idReserva = ?
   `;
 
   db.query(
-    sqlBusca,
-    [req.params.id],
-    (err, resultado) => {
+    sqlReserva,
+    [idReserva],
+    (err, reservas) => {
       if (err) {
-        return res.status(500).json(err);
-      }
+        console.log(
+          "Erro ao buscar reserva:",
+          err
+        );
 
-      if (resultado.length === 0) {
-        return res.status(404).json({
-          message:
-            "Reserva não encontrada."
+        return res.status(500).json({
+          message: "Erro ao buscar a reserva."
         });
       }
 
-      const idRecurso =
-        resultado[0].idRecurso;
+      if (reservas.length === 0) {
+        return res.status(404).json({
+          message: "Reserva não encontrada."
+        });
+      }
+
+      const reserva = reservas[0];
+
+      if (reserva.statusReserva !== "ativa") {
+        return res.status(400).json({
+          message:
+            "Somente reservas ativas podem ser editadas."
+        });
+      }
 
       const sqlConflito = `
-        SELECT *
+        SELECT idReserva
         FROM reserva
-        WHERE idRecurso = ?
+        WHERE
+          idRecurso = ?
           AND reservaData = ?
+          AND statusReserva = 'ativa'
           AND idReserva <> ?
-          AND statusReserva <> 'cancelada'
-          AND (? < horaDevolucao AND ? > horaRetirada)
+          AND (
+            ? < horaDevolucao
+            AND ? > horaRetirada
+          )
       `;
 
       db.query(
         sqlConflito,
         [
-          idRecurso,
+          reserva.idRecurso,
           reservaData,
-          req.params.id,
+          idReserva,
           horaRetirada,
           horaDevolucao
         ],
         (err, conflito) => {
           if (err) {
-            return res.status(500).json(err);
+            console.log(
+              "Erro ao verificar conflito na edição:",
+              err
+            );
+
+            return res.status(500).json({
+              message:
+                "Erro ao verificar disponibilidade do recurso."
+            });
           }
 
           if (conflito.length > 0) {
@@ -404,9 +591,10 @@ router.put("/:id", (req, res) => {
 
           const sql = `
             UPDATE reserva
-            SET reservaData = ?,
-                horaRetirada = ?,
-                horaDevolucao = ?
+            SET
+              reservaData = ?,
+              horaRetirada = ?,
+              horaDevolucao = ?
             WHERE idReserva = ?
           `;
 
@@ -416,16 +604,31 @@ router.put("/:id", (req, res) => {
               reservaData,
               horaRetirada,
               horaDevolucao,
-              req.params.id
+              idReserva
             ],
-            (err) => {
+            (err, result) => {
               if (err) {
-                return res.status(500).json(err);
+                console.log(
+                  "Erro ao atualizar reserva:",
+                  err
+                );
+
+                return res.status(500).json({
+                  message:
+                    "Erro ao atualizar a reserva."
+                });
+              }
+
+              if (result.affectedRows === 0) {
+                return res.status(404).json({
+                  message:
+                    "Reserva não encontrada."
+                });
               }
 
               res.json({
                 message:
-                  "Reserva atualizada"
+                  "Reserva atualizada com sucesso."
               });
             }
           );
