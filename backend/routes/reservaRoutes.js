@@ -19,6 +19,117 @@ function gerarCodigoReserva() {
   return codigo;
 }
 
+function converterHoraParaMinutos(hora) {
+  if (!hora) return null;
+
+  const partes = String(hora).split(":");
+
+  if (partes.length < 2) return null;
+
+  const horas = Number(partes[0]);
+  const minutos = Number(partes[1]);
+
+  if (
+    !Number.isInteger(horas) ||
+    !Number.isInteger(minutos) ||
+    horas < 0 ||
+    horas > 23 ||
+    minutos < 0 ||
+    minutos > 59
+  ) {
+    return null;
+  }
+
+  return horas * 60 + minutos;
+}
+
+function obterDataAtual() {
+  const agora = new Date();
+
+  const ano = agora.getFullYear();
+  const mes = String(agora.getMonth() + 1).padStart(2, "0");
+  const dia = String(agora.getDate()).padStart(2, "0");
+
+  return `${ano}-${mes}-${dia}`;
+}
+
+function horarioAtualEmMinutos() {
+  const agora = new Date();
+
+  return (
+    agora.getHours() * 60 +
+    agora.getMinutes()
+  );
+}
+
+function validarDataEHorario(
+  reservaData,
+  horaRetirada,
+  horaDevolucao
+) {
+  const hoje = obterDataAtual();
+
+  if (reservaData < hoje) {
+    return {
+      valido: false,
+      message:
+        "Não é possível fazer uma reserva para uma data passada."
+    };
+  }
+
+  const retirada = converterHoraParaMinutos(
+    horaRetirada
+  );
+
+  const devolucao = converterHoraParaMinutos(
+    horaDevolucao
+  );
+
+  if (
+    retirada === null ||
+    devolucao === null
+  ) {
+    return {
+      valido: false,
+      message: "Informe horários válidos."
+    };
+  }
+
+  if (devolucao <= retirada) {
+    return {
+      valido: false,
+      message:
+        "O horário de devolução deve ser maior que o horário de retirada."
+    };
+  }
+
+  const duracao = devolucao - retirada;
+
+  if (duracao < 30) {
+    return {
+      valido: false,
+      message:
+        "A reserva deve ter duração mínima de 30 minutos."
+    };
+  }
+
+  if (reservaData === hoje) {
+    const agora = horarioAtualEmMinutos();
+
+    if (retirada <= agora) {
+      return {
+        valido: false,
+        message:
+          "A hora de retirada já passou. Escolha um horário futuro."
+      };
+    }
+  }
+
+  return {
+    valido: true
+  };
+}
+
 router.get("/all", (req, res) => {
   const sql = `
     SELECT
@@ -36,7 +147,10 @@ router.get("/all", (req, res) => {
   `;
 
   db.query(sql, (err, result) => {
-    if (err) return res.status(500).json(err);
+    if (err) {
+      return res.status(500).json(err);
+    }
+
     res.json(result);
   });
 });
@@ -48,10 +162,17 @@ router.get("/usuario/:id", (req, res) => {
     ORDER BY reservaData DESC
   `;
 
-  db.query(sql, [req.params.id], (err, result) => {
-    if (err) return res.status(500).json(err);
-    res.json(result);
-  });
+  db.query(
+    sql,
+    [req.params.id],
+    (err, result) => {
+      if (err) {
+        return res.status(500).json(err);
+      }
+
+      res.json(result);
+    }
+  );
 });
 
 router.post("/", (req, res) => {
@@ -79,18 +200,15 @@ router.post("/", (req, res) => {
     });
   }
 
-const hoje = new Date().toISOString().split("T")[0];
+  const validacao = validarDataEHorario(
+    reservaData,
+    horaRetirada,
+    horaDevolucao
+  );
 
-  if (reservaData < hoje) {
+  if (!validacao.valido) {
     return res.status(400).json({
-      message: "A reserva deve ser ser feita apenas para datas futuras."
-    });
-  }
-
-  if (horaDevolucao <= horaRetirada) {
-    return res.status(400).json({
-      message:
-        "O horário de devolução deve ser maior que o horário de retirada."
+      message: validacao.message
     });
   }
 
@@ -123,7 +241,8 @@ const hoje = new Date().toISOString().split("T")[0];
         });
       }
 
-      const codigoReserva = gerarCodigoReserva();
+      const codigoReserva =
+        gerarCodigoReserva();
 
       const sql = `
         INSERT INTO reserva (
@@ -158,7 +277,8 @@ const hoje = new Date().toISOString().split("T")[0];
           }
 
           res.status(201).json({
-            message: "Reserva criada com sucesso.",
+            message:
+              "Reserva criada com sucesso.",
             idReserva: result.insertId,
             codigoReserva
           });
@@ -175,11 +295,19 @@ router.put("/cancelar/:id", (req, res) => {
     WHERE idReserva = ?
   `;
 
-  db.query(sql, [req.params.id], (err) => {
-    if (err) return res.status(500).json(err);
+  db.query(
+    sql,
+    [req.params.id],
+    (err) => {
+      if (err) {
+        return res.status(500).json(err);
+      }
 
-    res.json({ message: "Reserva cancelada" });
-  });
+      res.json({
+        message: "Reserva cancelada"
+      });
+    }
+  );
 });
 
 router.put("/:id", (req, res) => {
@@ -189,21 +317,113 @@ router.put("/:id", (req, res) => {
     horaDevolucao
   } = req.body;
 
-  const sql = `
-    UPDATE reserva
-    SET reservaData = ?,
-        horaRetirada = ?,
-        horaDevolucao = ?
+  if (
+    !reservaData ||
+    !horaRetirada ||
+    !horaDevolucao
+  ) {
+    return res.status(400).json({
+      message:
+        "Informe a data e os horários da reserva."
+    });
+  }
+
+  const validacao = validarDataEHorario(
+    reservaData,
+    horaRetirada,
+    horaDevolucao
+  );
+
+  if (!validacao.valido) {
+    return res.status(400).json({
+      message: validacao.message
+    });
+  }
+
+  const sqlBusca = `
+    SELECT idRecurso
+    FROM reserva
     WHERE idReserva = ?
   `;
 
   db.query(
-    sql,
-    [reservaData, horaRetirada, horaDevolucao, req.params.id],
-    (err) => {
-      if (err) return res.status(500).json(err);
+    sqlBusca,
+    [req.params.id],
+    (err, resultado) => {
+      if (err) {
+        return res.status(500).json(err);
+      }
 
-      res.json({ message: "Reserva atualizada" });
+      if (resultado.length === 0) {
+        return res.status(404).json({
+          message:
+            "Reserva não encontrada."
+        });
+      }
+
+      const idRecurso =
+        resultado[0].idRecurso;
+
+      const sqlConflito = `
+        SELECT *
+        FROM reserva
+        WHERE idRecurso = ?
+          AND reservaData = ?
+          AND idReserva <> ?
+          AND statusReserva <> 'cancelada'
+          AND (? < horaDevolucao AND ? > horaRetirada)
+      `;
+
+      db.query(
+        sqlConflito,
+        [
+          idRecurso,
+          reservaData,
+          req.params.id,
+          horaRetirada,
+          horaDevolucao
+        ],
+        (err, conflito) => {
+          if (err) {
+            return res.status(500).json(err);
+          }
+
+          if (conflito.length > 0) {
+            return res.status(409).json({
+              message:
+                "Já existe uma reserva para este recurso nesse horário."
+            });
+          }
+
+          const sql = `
+            UPDATE reserva
+            SET reservaData = ?,
+                horaRetirada = ?,
+                horaDevolucao = ?
+            WHERE idReserva = ?
+          `;
+
+          db.query(
+            sql,
+            [
+              reservaData,
+              horaRetirada,
+              horaDevolucao,
+              req.params.id
+            ],
+            (err) => {
+              if (err) {
+                return res.status(500).json(err);
+              }
+
+              res.json({
+                message:
+                  "Reserva atualizada"
+              });
+            }
+          );
+        }
+      );
     }
   );
 });
