@@ -126,12 +126,12 @@ function validarDataEHorario(
 
   if (
     reservaData === agoraBrasil.data &&
-    inicio <= agora
+    inicio < agora
   ) {
     return {
       valido: false,
       message:
-        "A hora de retirada já passou. Escolha um horário futuro."
+        "A hora de retirada já passou. Escolha um horário atual ou futuro."
     };
   }
 
