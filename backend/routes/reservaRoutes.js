@@ -123,7 +123,7 @@ function validarDataEHorario(
       agora.hora
     );
 
-    if (retirada <= horaAtual) {
+    if (retirada < horaAtual) {
       return {
         valido: false,
         message:
