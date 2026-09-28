@@ -10,9 +10,9 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   Image
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import API_URL from "../services/api";
 

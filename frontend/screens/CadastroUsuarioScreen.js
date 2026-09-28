@@ -29,16 +29,52 @@ export default function CadastroUsuarioScreen({ navigation }) {
 
   const cadastrar = async () => {
 
+    const matriculaFormatada = matricula
+      .trim()
+      .toUpperCase();
+
+
     if (
-      !nome ||
-      !matricula ||
-      !email ||
+      !nome.trim() ||
+      !matriculaFormatada ||
+      !email.trim() ||
       !senha ||
       !confirmarSenha
     ) {
+
       Alert.alert(
         "Atenção",
         "Preencha todos os campos."
+      );
+
+      return;
+    }
+
+
+    /*
+      FORMATO DA MATRÍCULA:
+
+      AAAA + SEMESTRE + CURSO + CAMPUS + NÚMEROS
+
+      Exemplo:
+      20241TDS-JG0165
+
+      2024 = ano de entrada
+      1    = semestre
+      TDS  = curso
+      JG   = campus
+      0165 = número do aluno
+    */
+
+    const formatoMatricula =
+      /^\d{5}[A-Z]{3}-[A-Z]{2}\d{4}$/;
+
+
+    if (!formatoMatricula.test(matriculaFormatada)) {
+
+      Alert.alert(
+        "Matrícula inválida",
+        "Digite sua matrícula no formato 20241TDS-JG0165."
       );
 
       return;
@@ -93,9 +129,9 @@ export default function CadastroUsuarioScreen({ navigation }) {
           },
 
           body: JSON.stringify({
-            nome,
-            matricula,
-            email,
+            nome: nome.trim(),
+            matricula: matriculaFormatada,
+            email: email.trim(),
             senha
           })
         }
@@ -109,7 +145,8 @@ export default function CadastroUsuarioScreen({ navigation }) {
 
         Alert.alert(
           "Erro",
-          data.message || "Não foi possível realizar o cadastro."
+          data.message ||
+            "Não foi possível realizar o cadastro."
         );
 
         return;
@@ -131,7 +168,10 @@ export default function CadastroUsuarioScreen({ navigation }) {
 
     } catch (error) {
 
-      console.log("Erro no cadastro:", error);
+      console.log(
+        "Erro no cadastro:",
+        error
+      );
 
       Alert.alert(
         "Erro",
@@ -213,6 +253,7 @@ export default function CadastroUsuarioScreen({ navigation }) {
               Nome completo
             </Text>
 
+
             <TextInput
               style={styles.input}
               placeholder="Digite seu nome completo"
@@ -227,13 +268,25 @@ export default function CadastroUsuarioScreen({ navigation }) {
               Matrícula
             </Text>
 
+
             <TextInput
               style={styles.input}
-              placeholder="Digite sua matrícula"
+              placeholder="Ex.: 20241TDS-JG0165"
               value={matricula}
-              onChangeText={setMatricula}
+              onChangeText={(texto) =>
+                setMatricula(
+                  texto.toUpperCase()
+                )
+              }
               autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={15}
             />
+
+
+            <Text style={styles.description}>
+              Formato: ano + semestre + curso + campus + 4 números.
+            </Text>
 
 
             {/* EMAIL */}
@@ -241,6 +294,7 @@ export default function CadastroUsuarioScreen({ navigation }) {
             <Text style={styles.label}>
               Email
             </Text>
+
 
             <TextInput
               style={styles.input}
@@ -259,9 +313,11 @@ export default function CadastroUsuarioScreen({ navigation }) {
               Senha
             </Text>
 
+
             <Text style={styles.description}>
               A senha deve ter no mínimo 6 caracteres.
             </Text>
+
 
             <TextInput
               style={styles.input}
@@ -278,6 +334,7 @@ export default function CadastroUsuarioScreen({ navigation }) {
               Confirmar senha
             </Text>
 
+
             <TextInput
               style={styles.input}
               placeholder="Digite a senha novamente"
@@ -292,7 +349,8 @@ export default function CadastroUsuarioScreen({ navigation }) {
             <Pressable
               style={[
                 styles.button,
-                carregando && styles.buttonDisabled
+                carregando &&
+                  styles.buttonDisabled
               ]}
               onPress={cadastrar}
               disabled={carregando}
@@ -338,14 +396,14 @@ const styles = StyleSheet.create({
 
 
   header: {
-  height: 85,
-  backgroundColor: "#FFFFFF",
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  paddingHorizontal: 20,
-  paddingTop: 10
-},
+    height: 85,
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 10
+  },
 
 
   backButton: {
