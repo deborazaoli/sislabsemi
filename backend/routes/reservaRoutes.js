@@ -43,23 +43,28 @@ function converterHoraParaMinutos(hora) {
   return horas * 60 + minutos;
 }
 
-function obterDataAtual() {
-  const agora = new Date();
+function obterAgoraBrasil() {
+  const partes = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Recife",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23"
+  }).formatToParts(new Date());
 
-  const ano = agora.getFullYear();
-  const mes = String(agora.getMonth() + 1).padStart(2, "0");
-  const dia = String(agora.getDate()).padStart(2, "0");
+  const valores = {};
 
-  return `${ano}-${mes}-${dia}`;
-}
+  partes.forEach((parte) => {
+    valores[parte.type] = parte.value;
+  });
 
-function horarioAtualEmMinutos() {
-  const agora = new Date();
-
-  return (
-    agora.getHours() * 60 +
-    agora.getMinutes()
-  );
+  return {
+    data: `${valores.year}-${valores.month}-${valores.day}`,
+    hora: `${valores.hour}:${valores.minute}:${valores.second}`
+  };
 }
 
 function validarDataEHorario(
@@ -67,9 +72,9 @@ function validarDataEHorario(
   horaRetirada,
   horaDevolucao
 ) {
-  const hoje = obterDataAtual();
+  const agora = obterAgoraBrasil();
 
-  if (reservaData < hoje) {
+  if (reservaData < agora.data) {
     return {
       valido: false,
       message:
@@ -113,10 +118,12 @@ function validarDataEHorario(
     };
   }
 
-  if (reservaData === hoje) {
-    const agora = horarioAtualEmMinutos();
+  if (reservaData === agora.data) {
+    const horaAtual = converterHoraParaMinutos(
+      agora.hora
+    );
 
-    if (retirada <= agora) {
+    if (retirada <= horaAtual) {
       return {
         valido: false,
         message:
