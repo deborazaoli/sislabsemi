@@ -1,9 +1,20 @@
 import React, { useState } from "react";
-import {View,Text,TextInput,Button,Alert,Pressable,Image} from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Alert,
+  Pressable,
+  StyleSheet
+} from "react-native";
+
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
 
 export default function LoginScreen({ navigation }) {
+
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
 
@@ -16,63 +27,117 @@ export default function LoginScreen({ navigation }) {
     } catch (error) {
       console.log(error);
 
-      Alert.alert("Erro", "Email ou senha inválidos");
+      Alert.alert(
+        "Erro",
+        "Email ou senha inválidos"
+      );
     }
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#ccfce4" }}>
+    <SafeAreaView
+      style={styles.safeArea}
+      edges={["top"]}
+    >
 
-      <View style={styles.header}>
+      <View style={styles.containerPrincipal}>
 
-        <Pressable onPress={() => navigation.goBack()}>
-          <Image
-            source={require("../assets/seta.png")}
-            style={styles.backIcon}
+        {/* HEADER */}
+
+        <View style={styles.header}>
+
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={styles.voltar}
+          >
+            <Text style={styles.seta}>‹</Text>
+          </Pressable>
+
+          <Text style={styles.logo}>
+            SISLAB
+          </Text>
+
+          <View style={styles.espaco} />
+
+        </View>
+
+        {/* CONTEÚDO */}
+
+        <View style={styles.conteudo}>
+
+          <Text style={styles.subtitulo}>
+            Login
+          </Text>
+
+          <TextInput
+            placeholder="Email"
+            placeholderTextColor="#777"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            style={styles.input}
           />
-        </Pressable>
 
-        <Text style={styles.logo}>SISLAB</Text>
+          <TextInput
+            placeholder="Senha"
+            placeholderTextColor="#777"
+            value={senha}
+            onChangeText={setSenha}
+            secureTextEntry
+            style={styles.input}
+          />
 
-        <View style={{ width: 30 }} />
+          <Pressable
+            style={styles.btn}
+            onPress={login}
+          >
+            <Text style={styles.btnTexto}>
+              Entrar
+            </Text>
+          </Pressable>
 
-      </View>
-
-      <View style={styles.container}>
-
-        
-        <Text style={styles.subtitulo}>Login</Text>
-        <TextInput
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          style={styles.input}
-        />
-
-        <TextInput
-          placeholder="Senha"
-          value={senha}
-          onChangeText={setSenha}
-          secureTextEntry
-          style={styles.input}
-        />
-
-        <Button title="Entrar" onPress={login} />
+        </View>
 
       </View>
 
-    </View>
+    </SafeAreaView>
   );
 }
 
-const styles = {
+const styles = StyleSheet.create({
+
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#FFFFFF"
+  },
+
+  containerPrincipal: {
+    flex: 1,
+    backgroundColor: "#CCFCE4"
+  },
+
   header: {
-    height: 75,
+    height: 65,
     backgroundColor: "#FFFFFF",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20
+  },
+
+  voltar: {
+    width: 40,
+    height: 40,
+
+    justifyContent: "center",
+    alignItems: "center"
+  },
+
+  seta: {
+    fontSize: 42,
+    color: "#007A33",
+    lineHeight: 42
   },
 
   logo: {
@@ -81,31 +146,68 @@ const styles = {
     color: "#007A33"
   },
 
-  backIcon: {
-    width: 28,
-    height: 28,
-    resizeMode: "contain",
-    tintColor: "#007A33"
+  espaco: {
+    width: 40
   },
 
-  container: {
+  conteudo: {
     flex: 1,
-    justifyContent: "center",
-    padding: 30
-  },
 
-  input: {
-    backgroundColor: "#FFF",
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 15
+    justifyContent: "center",
+
+    paddingHorizontal: 30,
+
+    width: "100%"
   },
 
   subtitulo: {
-    fontSize: 25,
+    fontSize: 28,
     fontWeight: "bold",
-    color: "#000",
+    color: "#000000",
+
     textAlign: "center",
-    marginBottom: 20
+
+    marginBottom: 25
+  },
+
+  input: {
+    width: "100%",
+
+    backgroundColor: "#FFFFFF",
+
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+
+    borderRadius: 12,
+
+    marginBottom: 15,
+
+    fontSize: 16,
+
+    borderWidth: 1,
+    borderColor: "#E0E0E0"
+  },
+
+  btn: {
+    width: "100%",
+
+    backgroundColor: "#007A33",
+
+    paddingVertical: 15,
+
+    borderRadius: 12,
+
+    alignItems: "center",
+
+    marginTop: 5
+  },
+
+  btnTexto: {
+    color: "#FFFFFF",
+
+    fontSize: 16,
+
+    fontWeight: "bold"
   }
-};
+
+});

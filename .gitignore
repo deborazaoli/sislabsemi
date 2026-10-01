@@ -1,15 +1,19 @@
+# Dependências
 node_modules/
+
+# Arquivos de ambiente
 .env
 .env.*
 !.env.example
 
+# Expo
 .expo/
 dist/
 web-build/
 expo-env.d.ts
 
+# Native
 .kotlin/
-
 *.orig.*
 *.jks
 *.p8
@@ -17,14 +21,20 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# Metro
 .metro-health-check*
 
+# Debug
 npm-debug.*
 yarn-debug.*
 yarn-error.*
 
+# macOS
 .DS_Store
+
+# TypeScript
 *.tsbuildinfo
 
+# Pastas nativas geradas
 /ios
 /android

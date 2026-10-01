@@ -1,16 +1,18 @@
 import React, { useState } from "react";
+
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   StyleSheet,
   Image,
   Platform,
   ScrollView,
-  SafeAreaView,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  Alert
 } from "react-native";
+
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import DateTimePicker from "@react-native-community/datetimepicker";
 
@@ -19,16 +21,46 @@ import API_URL from "../services/api";
 const formatTime = (date) => {
   const h = String(date.getHours()).padStart(2, "0");
   const m = String(date.getMinutes()).padStart(2, "0");
+
   return `${h}:${m}:00`;
 };
 
-export default function ReservaScreen({ navigation, route }) {
+const formatDate = (date) => {
+  const ano = date.getFullYear();
+  const mes = String(date.getMonth() + 1).padStart(2, "0");
+  const dia = String(date.getDate()).padStart(2, "0");
 
-  // Usuário que fez login
+  return `${ano}-${mes}-${dia}`;
+};
+
+const dataSemHora = (date) => {
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate()
+  );
+};
+
+const obterMinutosDoDia = (date) => {
+  return (
+    date.getHours() * 60 +
+    date.getMinutes()
+  );
+};
+
+const mostrarErro = (titulo, mensagem) => {
+  if (Platform.OS === "web") {
+    window.alert(`${titulo}\n\n${mensagem}`);
+  } else {
+    Alert.alert(titulo, mensagem);
+  }
+};
+
+export default function ReservaScreen({ navigation, route }) {
   const usuario = route?.params?.usuario;
 
-  const [nome, setNome] = useState(usuario?.nome || "");
-  const [matricula, setMatricula] = useState(usuario?.matricula || "");
+  const nome = usuario?.nome || "";
+  const matricula = usuario?.matricula || "";
 
   const [tipo, setTipo] = useState("");
   const [recurso, setRecurso] = useState("");
@@ -39,7 +71,9 @@ export default function ReservaScreen({ navigation, route }) {
 
   const [data, setData] = useState(new Date());
   const [horaInicio, setHoraInicio] = useState(new Date());
-  const [horaFim, setHoraFim] = useState(new Date());
+  const [horaFim, setHoraFim] = useState(
+    new Date(Date.now() + 60 * 60 * 1000)
+  );
 
   const [showDate, setShowDate] = useState(false);
   const [showInicio, setShowInicio] = useState(false);
@@ -48,81 +82,166 @@ export default function ReservaScreen({ navigation, route }) {
   const buscarRecursos = async (tipoSelecionado) => {
     try {
       const res = await fetch(
-        `${API_URL}/recursos?tipo=${tipoSelecionado}`
+        `${API_URL}/recursos?tipo=${encodeURIComponent(
+          tipoSelecionado
+        )}`
       );
 
       const json = await res.json();
 
-      setListaRecursos(json);
+      const recursos = Array.isArray(json)
+        ? json
+        : json.recursos || [];
 
+      setListaRecursos(recursos);
     } catch (err) {
       console.log("Erro ao buscar recursos:", err);
-      alert("Não foi possível carregar os recursos.");
+
+      mostrarErro(
+        "Erro",
+        "Não foi possível carregar os recursos."
+      );
     }
   };
 
-  const selecionarTipo = (tipoSelecionado) => {
-    setTipo(tipoSelecionado);
+  const selecionarTipo = (valor) => {
+    setTipo(valor);
     setRecurso("");
     setListaRecursos([]);
-
     setTipoAberto(false);
     setRecursoAberto(false);
 
-    if (tipoSelecionado) {
-      buscarRecursos(tipoSelecionado);
-    }
+    buscarRecursos(valor);
   };
 
-  const selecionarRecurso = (idRecurso) => {
-    setRecurso(idRecurso);
+  const selecionarRecurso = (valor) => {
+    setRecurso(valor);
     setRecursoAberto(false);
   };
 
-  const nomeTipo = () => {
-    if (!tipo) {
-      return "Selecione o tipo";
-    }
+  const nomeTipo = (valor) => {
+    if (valor === "Sala") return "Sala";
+    if (valor === "Laboratório") return "Laboratório";
+    if (valor === "Equipamento") return "Equipamento";
 
-    return tipo;
+    return "Selecione o tipo de recurso";
   };
 
-  const nomeRecurso = () => {
-    if (!recurso) {
-      return "Escolha o recurso";
-    }
-
-    const itemSelecionado = listaRecursos.find(
-      (item) => item.idRecurso === recurso
+  const nomeRecurso = (id) => {
+    const encontrado = listaRecursos.find(
+      (item) => item.idRecurso === id
     );
 
-    return itemSelecionado?.nome || "Escolha o recurso";
+    return encontrado?.nome || "Selecione o recurso";
+  };
+
+  const validarReserva = () => {
+    const agora = new Date();
+
+    const hoje = dataSemHora(agora);
+    const dataSelecionada = dataSemHora(data);
+
+    if (dataSelecionada < hoje) {
+      mostrarErro(
+        "Data inválida",
+        "Não é possível fazer uma reserva para uma data passada."
+      );
+
+      return false;
+    }
+
+    const inicio = new Date(
+      data.getFullYear(),
+      data.getMonth(),
+      data.getDate(),
+      horaInicio.getHours(),
+      horaInicio.getMinutes(),
+      0
+    );
+
+    const fim = new Date(
+      data.getFullYear(),
+      data.getMonth(),
+      data.getDate(),
+      horaFim.getHours(),
+      horaFim.getMinutes(),
+      0
+    );
+
+    const minutosAgora =
+      obterMinutosDoDia(agora);
+
+    const minutosInicio =
+      obterMinutosDoDia(horaInicio);
+
+    if (
+      dataSelecionada.getTime() === hoje.getTime() &&
+      minutosInicio < minutosAgora
+    ) {
+      mostrarErro(
+        "Horário inválido",
+        "A hora de retirada já passou. Escolha o horário atual ou um horário futuro."
+      );
+
+      return false;
+    }
+
+    if (fim <= inicio) {
+      mostrarErro(
+        "Horário inválido",
+        "A hora de devolução deve ser depois da hora de retirada."
+      );
+
+      return false;
+    }
+
+    const duracaoMinutos =
+      (fim.getTime() - inicio.getTime()) /
+      (1000 * 60);
+
+    if (duracaoMinutos < 30) {
+      mostrarErro(
+        "Duração inválida",
+        "A reserva deve ter duração mínima de 30 minutos."
+      );
+
+      return false;
+    }
+
+    return true;
   };
 
   const salvarReserva = async () => {
+    if (!nome || !matricula || !tipo || !recurso) {
+      mostrarErro(
+        "Campos obrigatórios",
+        "Preencha todos os campos obrigatórios."
+      );
+
+      return;
+    }
+
+    if (!usuario?.idUsuario) {
+      mostrarErro(
+        "Usuário não identificado",
+        "Faça login novamente para realizar uma reserva."
+      );
+
+      return;
+    }
+
+    if (!validarReserva()) {
+      return;
+    }
+
     try {
-
-      if (!nome || !matricula || !tipo || !recurso) {
-        alert("Preencha todos os campos obrigatórios");
-        return;
-      }
-
-      // Verifica se existe usuário logado
-      if (!usuario?.idUsuario) {
-        alert("Usuário não identificado. Faça login novamente.");
-        return;
-      }
-
       const payload = {
         responsavelNome: nome,
         responsavelMatricula: matricula,
-        reservaData: data.toISOString().split("T")[0],
+        reservaData: formatDate(data),
         horaRetirada: formatTime(horaInicio),
         horaDevolucao: formatTime(horaFim),
-
-        // Usuário que realmente está logado
         idUsuario: usuario.idUsuario,
-
         idRecurso: recurso
       };
 
@@ -137,37 +256,141 @@ export default function ReservaScreen({ navigation, route }) {
       const json = await res.json();
 
       if (!res.ok) {
-        alert(json.message || "Erro ao criar reserva");
+        mostrarErro(
+          "Não foi possível realizar a reserva",
+          json.message ||
+            "Ocorreu um erro ao criar a reserva."
+        );
+
         return;
       }
 
-      alert("Reserva criada com sucesso!");
+      mostrarErro(
+        "Reserva realizada",
+        `Reserva criada com sucesso!\n\nCódigo: ${json.codigoReserva}`
+      );
 
       navigation.goBack();
-
     } catch (err) {
-
       console.log("Erro ao salvar reserva:", err);
 
-      alert("Erro ao salvar reserva");
+      mostrarErro(
+        "Erro",
+        "Não foi possível salvar a reserva."
+      );
     }
+  };
+
+  const alterarData = (event, selectedDate) => {
+    setShowDate(false);
+
+    if (selectedDate) {
+      setData(selectedDate);
+    }
+  };
+
+  const alterarHoraInicio = (event, selectedTime) => {
+    setShowInicio(false);
+
+    if (selectedTime) {
+      setHoraInicio(selectedTime);
+    }
+  };
+
+  const alterarHoraFim = (event, selectedTime) => {
+    setShowFim(false);
+
+    if (selectedTime) {
+      setHoraFim(selectedTime);
+    }
+  };
+
+  const dataWeb = formatDate(data);
+
+  const horaInicioWeb = `${String(
+    horaInicio.getHours()
+  ).padStart(2, "0")}:${String(
+    horaInicio.getMinutes()
+  ).padStart(2, "0")}`;
+
+  const horaFimWeb = `${String(
+    horaFim.getHours()
+  ).padStart(2, "0")}:${String(
+    horaFim.getMinutes()
+  ).padStart(2, "0")}`;
+
+  const atualizarDataWeb = (event) => {
+    const valor = event.target.value;
+
+    if (!valor) return;
+
+    const [ano, mes, dia] = valor
+      .split("-")
+      .map(Number);
+
+    const novaData = new Date(
+      ano,
+      mes - 1,
+      dia,
+      data.getHours(),
+      data.getMinutes()
+    );
+
+    setData(novaData);
+  };
+
+  const atualizarHoraInicioWeb = (event) => {
+    const valor = event.target.value;
+
+    if (!valor) return;
+
+    const [hora, minuto] = valor
+      .split(":")
+      .map(Number);
+
+    const novaHora = new Date(horaInicio);
+
+    novaHora.setHours(hora);
+    novaHora.setMinutes(minuto);
+    novaHora.setSeconds(0);
+    novaHora.setMilliseconds(0);
+
+    setHoraInicio(novaHora);
+  };
+
+  const atualizarHoraFimWeb = (event) => {
+    const valor = event.target.value;
+
+    if (!valor) return;
+
+    const [hora, minuto] = valor
+      .split(":")
+      .map(Number);
+
+    const novaHora = new Date(horaFim);
+
+    novaHora.setHours(hora);
+    novaHora.setMinutes(minuto);
+    novaHora.setSeconds(0);
+    novaHora.setMilliseconds(0);
+
+    setHoraFim(novaHora);
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={
+          Platform.OS === "ios"
+            ? "padding"
+            : undefined
+        }
       >
-
-        {/* HEADER */}
-
         <View style={styles.header}>
-
           <Pressable
-            onPress={() => navigation.goBack()}
             style={styles.backButton}
+            onPress={() => navigation.goBack()}
           >
             <Image
               source={require("../assets/seta.png")}
@@ -175,65 +398,62 @@ export default function ReservaScreen({ navigation, route }) {
             />
           </Pressable>
 
-          <Text style={styles.logo}>
-            SISLAB
-          </Text>
+          <Text style={styles.logo}>SISLAB</Text>
 
           <View style={styles.headerSpace} />
-
         </View>
-
-        {/* CONTEÚDO */}
 
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-
           <Text style={styles.title}>
             Fazer Reserva
           </Text>
 
-          {/* NOME */}
+          <Text style={styles.label}>
+            Nome do responsável
+          </Text>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Nome completo"
-            value={nome}
-            onChangeText={setNome}
-          />
+          <View style={styles.inputBloqueado}>
+            <Text style={styles.inputBloqueadoTexto}>
+              {nome}
+            </Text>
+          </View>
 
-          {/* MATRÍCULA */}
+          <Text style={styles.label}>
+            Matrícula
+          </Text>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Matrícula"
-            value={matricula}
-            onChangeText={setMatricula}
-          />
+          <View style={styles.inputBloqueado}>
+            <Text style={styles.inputBloqueadoTexto}>
+              {matricula}
+            </Text>
+          </View>
 
-          {/* DATA */}
+          <Text style={styles.label}>
+            Data de reserva
+          </Text>
 
           {Platform.OS === "web" ? (
-
-            <input
-              type="date"
-              value={data.toISOString().split("T")[0]}
-              onChange={(e) => setData(new Date(e.target.value))}
-              style={styles.webInput}
-            />
-
+            <View style={styles.webInputContainer}>
+              <input
+                type="date"
+                value={dataWeb}
+                min={formatDate(new Date())}
+                onChange={atualizarDataWeb}
+                style={styles.webInput}
+              />
+            </View>
           ) : (
-
             <>
               <Pressable
-                style={styles.input}
+                style={styles.inputCompact}
                 onPress={() => setShowDate(true)}
               >
                 <Text style={styles.inputText}>
-                  Data: {data.toLocaleDateString()}
+                  {data.toLocaleDateString("pt-BR")}
                 </Text>
               </Pressable>
 
@@ -241,125 +461,95 @@ export default function ReservaScreen({ navigation, route }) {
                 <DateTimePicker
                   value={data}
                   mode="date"
-                  onChange={(e, selected) => {
-                    setShowDate(false);
-
-                    if (selected) {
-                      setData(selected);
-                    }
-                  }}
+                  display="default"
+                  minimumDate={new Date()}
+                  onChange={alterarData}
                 />
               )}
             </>
-
           )}
 
-          {/* HORA INÍCIO */}
+          <View style={styles.horariosContainer}>
+            <View style={styles.horarioColuna}>
+              <Text style={styles.label}>
+                Hora de retirada
+              </Text>
 
-          {Platform.OS === "web" ? (
+              {Platform.OS === "web" ? (
+                <View style={styles.webInputContainer}>
+                  <input
+                    type="time"
+                    value={horaInicioWeb}
+                    onChange={atualizarHoraInicioWeb}
+                    style={styles.webInput}
+                  />
+                </View>
+              ) : (
+                <>
+                  <Pressable
+                    style={styles.inputCompact}
+                    onPress={() => setShowInicio(true)}
+                  >
+                    <Text style={styles.inputText}>
+                      {horaInicioWeb}
+                    </Text>
+                  </Pressable>
 
-            <input
-              type="time"
-              value={horaInicio.toTimeString().slice(0, 5)}
-              onChange={(e) => {
-                const [h, m] = e.target.value.split(":");
-
-                const d = new Date();
-
-                d.setHours(h, m);
-
-                setHoraInicio(d);
-              }}
-              style={styles.webInput}
-            />
-
-          ) : (
-
-            <>
-              <Pressable
-                style={styles.input}
-                onPress={() => setShowInicio(true)}
-              >
-                <Text style={styles.inputText}>
-                  Início: {horaInicio.toTimeString().slice(0, 5)}
-                </Text>
-              </Pressable>
-
-              {showInicio && (
-                <DateTimePicker
-                  value={horaInicio}
-                  mode="time"
-                  is24Hour
-                  onChange={(e, selected) => {
-                    setShowInicio(false);
-
-                    if (selected) {
-                      setHoraInicio(selected);
-                    }
-                  }}
-                />
+                  {showInicio && (
+                    <DateTimePicker
+                      value={horaInicio}
+                      mode="time"
+                      display="default"
+                      onChange={alterarHoraInicio}
+                    />
+                  )}
+                </>
               )}
-            </>
+            </View>
 
-          )}
+            <View style={styles.horarioColuna}>
+              <Text style={styles.label}>
+                Hora de devolução
+              </Text>
 
-          {/* HORA FIM */}
+              {Platform.OS === "web" ? (
+                <View style={styles.webInputContainer}>
+                  <input
+                    type="time"
+                    value={horaFimWeb}
+                    onChange={atualizarHoraFimWeb}
+                    style={styles.webInput}
+                  />
+                </View>
+              ) : (
+                <>
+                  <Pressable
+                    style={styles.inputCompact}
+                    onPress={() => setShowFim(true)}
+                  >
+                    <Text style={styles.inputText}>
+                      {horaFimWeb}
+                    </Text>
+                  </Pressable>
 
-          {Platform.OS === "web" ? (
-
-            <input
-              type="time"
-              value={horaFim.toTimeString().slice(0, 5)}
-              onChange={(e) => {
-                const [h, m] = e.target.value.split(":");
-
-                const d = new Date();
-
-                d.setHours(h, m);
-
-                setHoraFim(d);
-              }}
-              style={styles.webInput}
-            />
-
-          ) : (
-
-            <>
-              <Pressable
-                style={styles.input}
-                onPress={() => setShowFim(true)}
-              >
-                <Text style={styles.inputText}>
-                  Fim: {horaFim.toTimeString().slice(0, 5)}
-                </Text>
-              </Pressable>
-
-              {showFim && (
-                <DateTimePicker
-                  value={horaFim}
-                  mode="time"
-                  is24Hour
-                  onChange={(e, selected) => {
-                    setShowFim(false);
-
-                    if (selected) {
-                      setHoraFim(selected);
-                    }
-                  }}
-                />
+                  {showFim && (
+                    <DateTimePicker
+                      value={horaFim}
+                      mode="time"
+                      display="default"
+                      onChange={alterarHoraFim}
+                    />
+                  )}
+                </>
               )}
-            </>
-
-          )}
-
-          {/* TIPO DE RECURSO */}
+            </View>
+          </View>
 
           <Text style={styles.label}>
             Tipo de Recurso
           </Text>
 
           <View style={styles.dropdownContainer}>
-
             <Pressable
               style={styles.dropdown}
               onPress={() => {
@@ -367,155 +557,111 @@ export default function ReservaScreen({ navigation, route }) {
                 setRecursoAberto(false);
               }}
             >
-
-              <Text
-                style={[
-                  styles.dropdownText,
-                  !tipo && styles.placeholder
-                ]}
-              >
-                {nomeTipo()}
+              <Text style={styles.dropdownText}>
+                {nomeTipo(tipo)}
               </Text>
 
               <Text style={styles.arrow}>
                 {tipoAberto ? "▲" : "▼"}
               </Text>
-
             </Pressable>
 
             {tipoAberto && (
               <View style={styles.dropdownList}>
-
-                <Pressable
-                  style={styles.dropdownItem}
-                  onPress={() => selecionarTipo("Sala")}
-                >
-                  <Text style={styles.dropdownItemText}>
-                    Sala
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  style={styles.dropdownItem}
-                  onPress={() => selecionarTipo("Laboratório")}
-                >
-                  <Text style={styles.dropdownItemText}>
-                    Laboratório
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  style={styles.dropdownItem}
-                  onPress={() => selecionarTipo("Equipamento")}
-                >
-                  <Text style={styles.dropdownItemText}>
-                    Equipamento
-                  </Text>
-                </Pressable>
-
+                {[
+                  "Sala",
+                  "Laboratório",
+                  "Equipamento"
+                ].map((item) => (
+                  <Pressable
+                    key={item}
+                    style={styles.dropdownItem}
+                    onPress={() =>
+                      selecionarTipo(item)
+                    }
+                  >
+                    <Text style={styles.dropdownItemText}>
+                      {item}
+                    </Text>
+                  </Pressable>
+                ))}
               </View>
             )}
-
           </View>
 
-          {/* RECURSO ESPECÍFICO */}
+          <Text style={styles.label}>
+            Recurso
+          </Text>
 
-          {tipo !== "" && (
-
-            <>
-              <Text style={styles.label}>
-                Recurso
+          <View style={styles.dropdownContainer}>
+            <Pressable
+              style={styles.dropdown}
+              onPress={() => {
+                if (listaRecursos.length > 0) {
+                  setRecursoAberto(!recursoAberto);
+                  setTipoAberto(false);
+                }
+              }}
+            >
+              <Text style={styles.dropdownText}>
+                {recurso
+                  ? nomeRecurso(recurso)
+                  : "Selecione o recurso"}
               </Text>
 
-              <View style={styles.dropdownContainer}>
+              <Text style={styles.arrow}>
+                {recursoAberto ? "▲" : "▼"}
+              </Text>
+            </Pressable>
 
-                <Pressable
-                  style={styles.dropdown}
-                  onPress={() => {
-                    setRecursoAberto(!recursoAberto);
-                    setTipoAberto(false);
-                  }}
-                >
-
-                  <Text
-                    style={[
-                      styles.dropdownText,
-                      !recurso && styles.placeholder
-                    ]}
-                  >
-                    {nomeRecurso()}
-                  </Text>
-
-                  <Text style={styles.arrow}>
-                    {recursoAberto ? "▲" : "▼"}
-                  </Text>
-
-                </Pressable>
-
-                {recursoAberto && (
-                  <View style={styles.dropdownList}>
-
-                    {listaRecursos.length === 0 ? (
-
-                      <View style={styles.emptyItem}>
-                        <Text style={styles.emptyText}>
-                          Nenhum recurso disponível.
-                        </Text>
-                      </View>
-
-                    ) : (
-
-                      listaRecursos.map((item) => (
-
-                        <Pressable
-                          key={item.idRecurso}
-                          style={styles.dropdownItem}
-                          onPress={() =>
-                            selecionarRecurso(item.idRecurso)
-                          }
-                        >
-
-                          <Text style={styles.dropdownItemText}>
-                            {item.nome}
-                          </Text>
-
-                        </Pressable>
-
-                      ))
-
-                    )}
-
+            {recursoAberto && (
+              <View style={styles.dropdownList}>
+                {listaRecursos.length > 0 ? (
+                  listaRecursos.map((item) => (
+                    <Pressable
+                      key={item.idRecurso}
+                      style={styles.dropdownItem}
+                      onPress={() =>
+                        selecionarRecurso(
+                          item.idRecurso
+                        )
+                      }
+                    >
+                      <Text
+                        style={
+                          styles.dropdownItemText
+                        }
+                      >
+                        {item.nome}
+                      </Text>
+                    </Pressable>
+                  ))
+                ) : (
+                  <View style={styles.emptyItem}>
+                    <Text style={styles.emptyText}>
+                      Nenhum recurso disponível.
+                    </Text>
                   </View>
                 )}
-
               </View>
-            </>
-
-          )}
-
-          {/* BOTÃO */}
+            )}
+          </View>
 
           <Pressable
             style={styles.button}
             onPress={salvarReserva}
           >
-
             <Text style={styles.buttonText}>
               Reservar
             </Text>
-
           </Pressable>
-
         </ScrollView>
-
       </KeyboardAvoidingView>
-
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-
   safeArea: {
     flex: 1,
     backgroundColor: "#ccfce4"
@@ -574,34 +720,70 @@ const styles = StyleSheet.create({
     marginBottom: 20
   },
 
-  input: {
-    backgroundColor: "#FFF",
+  label: {
+    fontWeight: "bold",
+    marginBottom: 5,
+    marginTop: 2,
+    color: "#333"
+  },
+
+  inputBloqueado: {
+    backgroundColor: "#F1F3F2",
     padding: 15,
     borderRadius: 12,
     marginBottom: 12,
     minHeight: 50,
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#D8DDD9"
+  },
+
+  inputBloqueadoTexto: {
+    fontSize: 16,
+    color: "#444"
+  },
+
+  inputCompact: {
+    backgroundColor: "#FFF",
+    padding: 13,
+    borderRadius: 12,
+    marginBottom: 8,
+    minHeight: 48,
     justifyContent: "center"
   },
 
   inputText: {
-    color: "#333"
+    color: "#333",
+    fontSize: 16
+  },
+
+  webInputContainer: {
+    width: "100%",
+    marginBottom: 8
   },
 
   webInput: {
-    padding: 15,
-    marginBottom: 12,
+    padding: 13,
+    marginBottom: 0,
     borderRadius: 12,
     border: "1px solid #ccc",
     backgroundColor: "#FFF",
     boxSizing: "border-box",
-    width: "100%"
+    width: "100%",
+    minHeight: 48,
+    fontSize: 16,
+    color: "#333"
   },
 
-  label: {
-    fontWeight: "bold",
-    marginBottom: 10,
-    marginTop: 5,
-    color: "#333"
+  horariosContainer: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 5
+  },
+
+  horarioColuna: {
+    flex: 1,
+    minWidth: 0
   },
 
   dropdownContainer: {
@@ -626,10 +808,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
     flex: 1
-  },
-
-  placeholder: {
-    color: "#777"
   },
 
   arrow: {
@@ -689,5 +867,4 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16
   }
-
 });

@@ -2,180 +2,328 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 
-// ==========================================
-// GERAR ID AUTOMÁTICO DO USUÁRIO
-// ==========================================
 
-function gerarIdUsuario(callback) {
+// ======================================================
+// GERAR ID DO USUÁRIO
+// ======================================================
 
-  db.query(
-    `
-    SELECT idUsuario
-    FROM usuario
-    ORDER BY idUsuario DESC
-    LIMIT 1
-    `,
-    (err, result) => {
+const gerarIdUsuario = () => {
+
+  return new Promise((resolve, reject) => {
+
+    const sql = `
+      SELECT idUsuario
+      FROM usuario
+      WHERE idUsuario LIKE 'U%'
+      ORDER BY CAST(SUBSTRING(idUsuario, 2) AS UNSIGNED) DESC
+      LIMIT 1
+    `;
+
+    db.query(sql, (err, results) => {
 
       if (err) {
-        return callback(err);
+        reject(err);
+        return;
       }
 
-      if (result.length === 0) {
-        return callback(null, "U001");
+      if (results.length === 0) {
+        resolve("U001");
+        return;
       }
 
-      const ultimoId = result[0].idUsuario;
+      const ultimoId = results[0].idUsuario;
 
       const numero = parseInt(
-        ultimoId.replace("U", ""),
+        ultimoId.substring(1),
         10
       );
 
       const novoNumero = numero + 1;
 
       const novoId =
-        "U" + String(novoNumero).padStart(3, "0");
+        "U" +
+        String(novoNumero).padStart(3, "0");
 
-      callback(null, novoId);
-    }
-  );
-}
+      resolve(novoId);
 
-// ==========================================
-// CADASTRO DE USUÁRIO
-// ==========================================
-
-router.post("/cadastro", (req, res) => {
-
-  const {
-    nome,
-    matricula,
-    email,
-    senha
-  } = req.body;
-
-
-  if (!nome || !matricula || !email || !senha) {
-
-    return res.status(400).json({
-      message: "Preencha todos os campos."
     });
 
-  }
+  });
+
+};
 
 
-  // Verifica se o email já existe
+// ======================================================
+// CADASTRO DE USUÁRIO
+// ======================================================
 
-  db.query(
-    "SELECT idUsuario FROM usuario WHERE email = ?",
-    [email],
-    (err, result) => {
+router.post("/cadastro", async (req, res) => {
 
-      if (err) {
+  try {
 
-        console.log(err);
-
-        return res.status(500).json({
-          message: "Erro ao verificar email."
-        });
-
-      }
+    let {
+      nome,
+      matricula,
+      email,
+      senha
+    } = req.body;
 
 
-      if (result.length > 0) {
+    // ----------------------------------------------
+    // VERIFICAR CAMPOS
+    // ----------------------------------------------
 
-        return res.status(409).json({
-          message: "Este email já está cadastrado."
-        });
+    if (
+      !nome ||
+      !matricula ||
+      !email ||
+      !senha
+    ) {
 
-      }
+      return res.status(400).json({
+        message: "Preencha todos os campos."
+      });
 
-
-      // Gera o ID
-
-      gerarIdUsuario((err, idUsuario) => {
-
-        if (err) {
-
-          console.log(err);
-
-          return res.status(500).json({
-            message: "Erro ao gerar ID do usuário."
-          });
-
-        }
+    }
 
 
-        /*
-          IMPORTANTE:
+    // ----------------------------------------------
+    // PADRONIZAR DADOS
+    // ----------------------------------------------
 
-          O usuário comum SEMPRE será cadastrado
-          como "usuario".
+    nome = nome.trim();
 
-          O frontend não pode escolher
-          "administrador".
-        */
+    matricula = matricula
+      .trim()
+      .toUpperCase();
 
-        const tipoUsuario = "usuario";
+    email = email
+      .trim()
+      .toLowerCase();
 
+
+    // ----------------------------------------------
+    // VALIDAR MATRÍCULA
+    // Exemplo: 20241TDS-JG0165
+    // ----------------------------------------------
+
+    const formatoMatricula =
+      /^\d{5}[A-Z]{3}-[A-Z]{2}\d{4}$/;
+
+
+    if (!formatoMatricula.test(matricula)) {
+
+      return res.status(400).json({
+        message:
+          "Matrícula inválida. Use o formato 20241TDS-JG0165."
+      });
+
+    }
+
+
+    // ----------------------------------------------
+    // VALIDAR EMAIL
+    // ----------------------------------------------
+
+    if (!email.includes("@")) {
+
+      return res.status(400).json({
+        message:
+          "Informe um email válido contendo '@'."
+      });
+
+    }
+
+
+    // ----------------------------------------------
+    // VALIDAR SENHA
+    // ----------------------------------------------
+
+    if (senha.length < 6) {
+
+      return res.status(400).json({
+        message:
+          "A senha deve ter no mínimo 6 caracteres."
+      });
+
+    }
+
+
+    // ----------------------------------------------
+    // VERIFICAR EMAIL EXISTENTE
+    // ----------------------------------------------
+
+    const verificarEmail = `
+      SELECT idUsuario
+      FROM usuario
+      WHERE email = ?
+      LIMIT 1
+    `;
+
+    const emailExistente =
+      await new Promise((resolve, reject) => {
 
         db.query(
-          `
-          INSERT INTO usuario
-          (
-            idUsuario,
-            nome,
-            matricula,
-            email,
-            senha,
-            tipoUsuario
-          )
-          VALUES (?, ?, ?, ?, ?, ?)
-          `,
-          [
-            idUsuario,
-            nome,
-            matricula,
-            email,
-            senha,
-            tipoUsuario
-          ],
-          (err, result) => {
+          verificarEmail,
+          [email],
+          (err, results) => {
 
             if (err) {
-
-              console.log(err);
-
-              return res.status(500).json({
-                message: "Erro ao cadastrar usuário."
-              });
-
+              reject(err);
+              return;
             }
 
-
-            res.status(201).json({
-
-              message: "Usuário cadastrado com sucesso!",
-
-              idUsuario: idUsuario
-
-            });
+            resolve(results);
 
           }
         );
 
       });
 
+
+    if (emailExistente.length > 0) {
+
+      return res.status(400).json({
+        message:
+          "Este email já está cadastrado."
+      });
+
     }
-  );
+
+
+    // ----------------------------------------------
+    // VERIFICAR MATRÍCULA EXISTENTE
+    // ----------------------------------------------
+
+    const verificarMatricula = `
+      SELECT idUsuario
+      FROM usuario
+      WHERE matricula = ?
+      LIMIT 1
+    `;
+
+    const matriculaExistente =
+      await new Promise((resolve, reject) => {
+
+        db.query(
+          verificarMatricula,
+          [matricula],
+          (err, results) => {
+
+            if (err) {
+              reject(err);
+              return;
+            }
+
+            resolve(results);
+
+          }
+        );
+
+      });
+
+
+    if (matriculaExistente.length > 0) {
+
+      return res.status(400).json({
+        message:
+          "Esta matrícula já está cadastrada."
+      });
+
+    }
+
+
+    // ----------------------------------------------
+    // GERAR ID
+    // ----------------------------------------------
+
+    const idUsuario =
+      await gerarIdUsuario();
+
+
+    // ----------------------------------------------
+    // INSERIR USUÁRIO
+    // ----------------------------------------------
+
+    const sql = `
+      INSERT INTO usuario
+      (
+        idUsuario,
+        nome,
+        matricula,
+        email,
+        senha,
+        tipoUsuario
+      )
+      VALUES (?, ?, ?, ?, ?, 'usuario')
+    `;
+
+
+    db.query(
+      sql,
+      [
+        idUsuario,
+        nome,
+        matricula,
+        email,
+        senha
+      ],
+      (err) => {
+
+        if (err) {
+
+          console.log(
+            "Erro ao cadastrar usuário:",
+            err
+          );
+
+          return res.status(500).json({
+            message:
+              "Erro ao realizar cadastro."
+          });
+
+        }
+
+
+        return res.status(201).json({
+
+          message:
+            "Cadastro realizado com sucesso.",
+
+          usuario: {
+            idUsuario,
+            nome,
+            matricula,
+            email,
+            tipoUsuario: "usuario"
+          }
+
+        });
+
+      }
+    );
+
+
+  } catch (error) {
+
+    console.log(
+      "Erro na rota de cadastro:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        "Erro interno do servidor."
+    });
+
+  }
 
 });
 
 
-// ==========================================
-// LOGIN DO USUÁRIO
-// ==========================================
+// ======================================================
+// LOGIN DE USUÁRIO
+// ======================================================
 
 router.post("/login", (req, res) => {
 
@@ -185,59 +333,97 @@ router.post("/login", (req, res) => {
   } = req.body;
 
 
+  // ----------------------------------------------
+  // VERIFICAR CAMPOS
+  // ----------------------------------------------
+
   if (!email || !senha) {
 
     return res.status(400).json({
-      message: "Informe email e senha."
+      message:
+        "Informe email e senha."
     });
 
   }
 
 
-  db.query(
-    `
+  // ----------------------------------------------
+  // BUSCAR USUÁRIO
+  // ----------------------------------------------
+
+  const sql = `
     SELECT
       idUsuario,
       nome,
       matricula,
       email,
+      senha,
       tipoUsuario
     FROM usuario
     WHERE email = ?
-    AND senha = ?
-    `,
-    [
-      email,
-      senha
-    ],
-    (err, result) => {
+    LIMIT 1
+  `;
+
+
+  db.query(
+    sql,
+    [email.trim().toLowerCase()],
+    (err, results) => {
 
       if (err) {
 
-        console.log(err);
+        console.log(
+          "Erro no login:",
+          err
+        );
 
         return res.status(500).json({
-          message: "Erro ao realizar login."
+          message:
+            "Erro ao realizar login."
         });
 
       }
 
 
-      if (result.length === 0) {
+      // ----------------------------------------------
+      // USUÁRIO NÃO ENCONTRADO
+      // ----------------------------------------------
+
+      if (results.length === 0) {
 
         return res.status(401).json({
-          message: "Email ou senha inválidos."
+          message:
+            "Email ou senha incorretos."
         });
 
       }
 
 
-      const usuario = result[0];
+      const usuario = results[0];
 
 
-      // Administrador não entra pelo login comum
+      // ----------------------------------------------
+      // VERIFICAR SENHA
+      // ----------------------------------------------
 
-      if (usuario.tipoUsuario === "administrador") {
+      if (usuario.senha !== senha) {
+
+        return res.status(401).json({
+          message:
+            "Email ou senha incorretos."
+        });
+
+      }
+
+
+      // ----------------------------------------------
+      // BLOQUEAR ADMIN NO LOGIN COMUM
+      // ----------------------------------------------
+
+      if (
+        usuario.tipoUsuario ===
+        "administrador"
+      ) {
 
         return res.status(403).json({
           message:
@@ -247,7 +433,35 @@ router.post("/login", (req, res) => {
       }
 
 
-      res.json(usuario);
+      // ----------------------------------------------
+      // LOGIN REALIZADO
+      // ----------------------------------------------
+
+      return res.status(200).json({
+
+        message:
+          "Login realizado com sucesso.",
+
+        usuario: {
+
+          idUsuario:
+            usuario.idUsuario,
+
+          nome:
+            usuario.nome,
+
+          matricula:
+            usuario.matricula,
+
+          email:
+            usuario.email,
+
+          tipoUsuario:
+            usuario.tipoUsuario
+
+        }
+
+      });
 
     }
   );

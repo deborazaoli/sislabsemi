@@ -2,15 +2,12 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 
-// Converte o tipo usado pelo aplicativo
-// para o tipo usado no banco de dados
 function converterTipo(tipo) {
   const tipos = {
     sala: "Sala",
     laboratorio: "Laboratório",
     equipamento: "Equipamento",
 
-    // Também aceita os valores que já vêm do banco
     Sala: "Sala",
     Laboratório: "Laboratório",
     Equipamento: "Equipamento"
@@ -20,9 +17,6 @@ function converterTipo(tipo) {
 }
 
 
-// ===============================
-// LISTAR TIPOS
-// ===============================
 router.get("/tipos", (req, res) => {
   db.query(
     "SELECT DISTINCT tipoRecurso FROM recurso",
@@ -40,9 +34,6 @@ router.get("/tipos", (req, res) => {
 });
 
 
-// ===============================
-// LISTAR RECURSOS
-// ===============================
 router.get("/", (req, res) => {
   const { tipo } = req.query;
 
