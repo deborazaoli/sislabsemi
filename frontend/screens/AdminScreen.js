@@ -6,75 +6,63 @@ import {
   StyleSheet,
   Image,
   useWindowDimensions,
-  ScrollView
+  ScrollView,
 } from "react-native";
 
 export default function AdminScreen({ navigation }) {
-
   const { width } = useWindowDimensions();
 
-  // Define o tamanho da tela
   const isSmallScreen = width < 600;
   const isVerySmallScreen = width < 380;
 
-  // Tamanho dos cards
+  // No computador: os 4 cards ficam em uma única fila.
+  // No celular: ficam 2 por linha.
   const cardWidth = isSmallScreen
-    ? Math.min(width - 40, 360)
-    : Math.min(240, (width - 160) / 3);
+    ? (width - 60) / 2
+    : (width - 160) / 4;
+
+  const cardHeight = isSmallScreen ? 190 : 230;
 
   return (
     <View style={styles.container}>
-
       {/* HEADER */}
       <View
         style={[
           styles.header,
           {
-            height: isSmallScreen ? 65 : 75,
-            paddingHorizontal: isSmallScreen ? 15 : 30
-          }
+            height: isSmallScreen ? 80 : 90,
+            paddingHorizontal: isSmallScreen ? 20 : 30,
+          },
         ]}
       >
-
         <Text
           style={[
             styles.logo,
             {
-              fontSize: isSmallScreen ? 24 : 28
-            }
+              fontSize: isSmallScreen ? 28 : 32,
+            },
           ]}
         >
           SISLAB
         </Text>
 
-
         <Pressable
           style={[
             styles.userButton,
             {
-              width: isSmallScreen ? 44 : 50,
-              height: isSmallScreen ? 44 : 50,
-              borderRadius: isSmallScreen ? 22 : 25
-            }
+              width: isSmallScreen ? 48 : 54,
+              height: isSmallScreen ? 48 : 54,
+              borderRadius: isSmallScreen ? 24 : 27,
+            },
           ]}
           onPress={() => navigation.navigate("Logout")}
         >
-
           <Image
             source={require("../assets/user.png")}
-            style={[
-              styles.userIcon,
-              {
-                width: isSmallScreen ? 34 : 40,
-                height: isSmallScreen ? 42 : 50
-              }
-            ]}
+            style={styles.userIcon}
           />
-
         </Pressable>
-
       </View>
-
 
       {/* CONTEÚDO */}
       <ScrollView
@@ -82,314 +70,290 @@ export default function AdminScreen({ navigation }) {
         contentContainerStyle={[
           styles.content,
           {
-            paddingHorizontal: isSmallScreen ? 20 : 30,
-            paddingVertical: isSmallScreen ? 30 : 50
-          }
+            paddingHorizontal: isSmallScreen ? 20 : 40,
+            paddingTop: isSmallScreen ? 25 : 40,
+            paddingBottom: 40,
+          },
         ]}
       >
+        <View style={styles.titleContainer}>
+          <Text
+            style={[
+              styles.title,
+              {
+                fontSize: isSmallScreen ? 23 : 28,
+              },
+            ]}
+          >
+            Área Administrativa
+          </Text>
 
-        <View
-          style={[
-            styles.cardsContainer,
-            {
-              flexDirection: isSmallScreen ? "column" : "row",
-              gap: isSmallScreen ? 20 : 40
-            }
-          ]}
-        >
+          <Text
+            style={[
+              styles.subtitle,
+              {
+                fontSize: isVerySmallScreen ? 13 : 15,
+              },
+            ]}
+          >
+            Gerencie os recursos e informações do SISLAB.
+          </Text>
+        </View>
 
-
+        {/* CARDS */}
+        <View style={styles.cardsContainer}>
           {/* LABORATÓRIOS */}
           <Pressable
-            style={[
+            style={({ pressed }) => [
               styles.card,
               {
                 width: cardWidth,
-                height: isSmallScreen ? 220 : 260,
-                paddingVertical: isSmallScreen ? 30 : 45
-              }
+                height: cardHeight,
+              },
+              pressed && styles.cardPressed,
             ]}
             onPress={() => navigation.navigate("Laboratorios")}
           >
+            <View style={styles.iconContainer}>
+              <Image
+                source={require("../assets/lab.png")}
+                style={styles.icon}
+              />
+            </View>
 
-            <Image
-              source={require("../assets/lab.png")}
-              style={[
-                styles.icon,
-                {
-                  width: isSmallScreen ? 80 : 100,
-                  height: isSmallScreen ? 80 : 100
-                }
-              ]}
-            />
-
-            <View
-              style={[
-                styles.button,
-                {
-                  width: isSmallScreen ? "80%" : 180
-                }
-              ]}
-            >
+            <View style={styles.button}>
               <Text
                 style={[
                   styles.buttonText,
                   {
-                    fontSize: isVerySmallScreen ? 14 : 16
-                  }
+                    fontSize: isVerySmallScreen ? 13 : 14,
+                  },
                 ]}
               >
                 Laboratórios
               </Text>
             </View>
-
           </Pressable>
-
 
           {/* SALAS */}
           <Pressable
-            style={[
+            style={({ pressed }) => [
               styles.card,
               {
                 width: cardWidth,
-                height: isSmallScreen ? 220 : 260,
-                paddingVertical: isSmallScreen ? 30 : 45
-              }
+                height: cardHeight,
+              },
+              pressed && styles.cardPressed,
             ]}
             onPress={() => navigation.navigate("Salas")}
           >
+            <View style={styles.iconContainer}>
+              <Image
+                source={require("../assets/sala.png")}
+                style={styles.icon}
+              />
+            </View>
 
-            <Image
-              source={require("../assets/sala.png")}
-              style={[
-                styles.icon,
-                {
-                  width: isSmallScreen ? 80 : 100,
-                  height: isSmallScreen ? 80 : 100
-                }
-              ]}
-            />
-
-            <View
-              style={[
-                styles.button,
-                {
-                  width: isSmallScreen ? "80%" : 180
-                }
-              ]}
-            >
+            <View style={styles.button}>
               <Text
                 style={[
                   styles.buttonText,
                   {
-                    fontSize: isVerySmallScreen ? 14 : 16
-                  }
+                    fontSize: isVerySmallScreen ? 13 : 14,
+                  },
                 ]}
               >
                 Salas
               </Text>
             </View>
-
           </Pressable>
-
 
           {/* EQUIPAMENTOS */}
           <Pressable
-            style={[
+            style={({ pressed }) => [
               styles.card,
               {
                 width: cardWidth,
-                height: isSmallScreen ? 220 : 260,
-                paddingVertical: isSmallScreen ? 30 : 45
-              }
+                height: cardHeight,
+              },
+              pressed && styles.cardPressed,
             ]}
             onPress={() => navigation.navigate("Equipamentos")}
           >
+            <View style={styles.iconContainer}>
+              <Image
+                source={require("../assets/equipamento.png")}
+                style={styles.icon}
+              />
+            </View>
 
-            <Image
-              source={require("../assets/equipamento.png")}
-              style={[
-                styles.icon,
-                {
-                  width: isSmallScreen ? 80 : 100,
-                  height: isSmallScreen ? 80 : 100
-                }
-              ]}
-            />
-
-            <View
-              style={[
-                styles.button,
-                {
-                  width: isSmallScreen ? "80%" : 180
-                }
-              ]}
-            >
+            <View style={styles.button}>
               <Text
                 style={[
                   styles.buttonText,
                   {
-                    fontSize: isVerySmallScreen ? 14 : 16
-                  }
+                    fontSize: isVerySmallScreen ? 13 : 14,
+                  },
                 ]}
               >
                 Equipamentos
               </Text>
             </View>
-
           </Pressable>
-
 
           {/* RELATÓRIOS */}
           <Pressable
-            style={[
+            style={({ pressed }) => [
               styles.card,
               {
                 width: cardWidth,
-                height: isSmallScreen ? 220 : 260,
-                paddingVertical: isSmallScreen ? 30 : 45
-              }
+                height: cardHeight,
+              },
+              pressed && styles.cardPressed,
             ]}
             onPress={() => navigation.navigate("Relatorios")}
           >
+            <View style={styles.iconContainer}>
+              <Image
+                source={require("../assets/relatorio.png")}
+                style={styles.icon}
+              />
+            </View>
 
-            <Image
-              source={require("../assets/relatorio.png")}
-              style={[
-                styles.icon,
-                {
-                  width: isSmallScreen ? 80 : 100,
-                  height: isSmallScreen ? 80 : 100
-                }
-              ]}
-            />
-
-            <View
-              style={[
-                styles.button,
-                {
-                  width: isSmallScreen ? "80%" : 180
-                }
-              ]}
-            >
+            <View style={styles.button}>
               <Text
                 style={[
                   styles.buttonText,
                   {
-                    fontSize: isVerySmallScreen ? 14 : 16
-                  }
+                    fontSize: isVerySmallScreen ? 13 : 14,
+                  },
                 ]}
               >
                 Relatórios
               </Text>
             </View>
-
           </Pressable>
-
-
         </View>
-
       </ScrollView>
-
     </View>
   );
 }
 
-
 const styles = StyleSheet.create({
-
   container: {
     flex: 1,
-    backgroundColor: "#ccfce4"
+    backgroundColor: "#e3f7ed",
   },
-
 
   header: {
     backgroundColor: "#FFFFFF",
-
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center"
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
+    elevation: 3,
   },
-
 
   logo: {
     fontWeight: "bold",
-    color: "#007A33"
+    color: "#006633",
   },
-
 
   userButton: {
-    backgroundColor: "#007A33",
-
+    backgroundColor: "#FFFFFF",
     justifyContent: "center",
-    alignItems: "center"
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#d5eee3",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
   },
-
 
   userIcon: {
-    tintColor: "#FFF",
-    resizeMode: "contain"
+    width: "60%",
+    height: "60%",
+    tintColor: "#006633",
+    resizeMode: "contain",
   },
-
 
   content: {
     flexGrow: 1,
-
-    justifyContent: "center",
-    alignItems: "center"
+    alignItems: "center",
   },
 
+  titleContainer: {
+    width: "100%",
+    maxWidth: 1200,
+    marginBottom: 30,
+    alignItems: "center",
+  },
+
+  title: {
+    fontWeight: "bold",
+    color: "#006633",
+    marginBottom: 6,
+  },
+
+  subtitle: {
+    color: "#666666",
+  },
 
   cardsContainer: {
-    justifyContent: "center",
-    alignItems: "center",
-
-    width: "100%"
+    width: "100%",
+    maxWidth: 1200,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 20,
   },
-
 
   card: {
-    backgroundColor: "#FFF",
-
+    backgroundColor: "#FFFFFF",
     borderRadius: 20,
-
     justifyContent: "space-between",
     alignItems: "center",
-
+    padding: 15,
+    borderWidth: 1.5,
+    borderColor: "#a6e4cf",
     shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
     elevation: 5,
-
-    borderWidth: 3,
-    borderColor: "#00A884"
   },
 
+  cardPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
+  },
+
+  iconContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
   icon: {
-    resizeMode: "contain"
+    width: 90,
+    height: 90,
+    resizeMode: "contain",
   },
-
 
   button: {
+    width: "100%",
     backgroundColor: "#007A33",
-
-    paddingVertical: 12,
-
-    borderRadius: 25,
-
-    alignItems: "center"
+    paddingVertical: 10,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
-
   buttonText: {
-    color: "#FFF",
-
+    color: "#FFFFFF",
     fontWeight: "600",
-
-    textAlign: "center"
-  }
-
+    textAlign: "center",
+  },
 });

@@ -17,12 +17,16 @@ function converterTipo(tipo) {
 }
 
 
+// ===============================
+// TIPOS DE RECURSOS
+// ===============================
 router.get("/tipos", (req, res) => {
   db.query(
     "SELECT DISTINCT tipoRecurso FROM recurso",
     (err, resultado) => {
       if (err) {
         console.log(err);
+
         return res.status(500).json({
           message: "Erro ao buscar tipos de recursos."
         });
@@ -34,6 +38,89 @@ router.get("/tipos", (req, res) => {
 });
 
 
+// ===============================
+// RECURSOS DISPONÍVEIS PARA
+// DETERMINADO DIA E HORÁRIO
+// ===============================
+router.get("/disponiveis", (req, res) => {
+  const {
+    tipo,
+    data,
+    horaRetirada,
+    horaDevolucao
+  } = req.query;
+
+  if (
+    !tipo ||
+    !data ||
+    !horaRetirada ||
+    !horaDevolucao
+  ) {
+    return res.status(400).json({
+      message:
+        "Informe o tipo, a data, a hora de retirada e a hora de devolução."
+    });
+  }
+
+  const tipoBanco = converterTipo(tipo);
+
+  if (!tipoBanco) {
+    return res.status(400).json({
+      message: "Tipo de recurso inválido."
+    });
+  }
+
+  const sql = `
+    SELECT
+      recurso.*
+    FROM recurso
+    WHERE
+      recurso.tipoRecurso = ?
+      AND recurso.statusRecurso = 'disponivel'
+      AND recurso.idRecurso NOT IN (
+        SELECT reserva.idRecurso
+        FROM reserva
+        WHERE
+          reserva.reservaData = ?
+          AND reserva.statusReserva = 'ativa'
+          AND (
+            ? < reserva.horaDevolucao
+            AND ? > reserva.horaRetirada
+          )
+      )
+    ORDER BY recurso.nome
+  `;
+
+  db.query(
+    sql,
+    [
+      tipoBanco,
+      data,
+      horaRetirada,
+      horaDevolucao
+    ],
+    (err, resultado) => {
+      if (err) {
+        console.log(
+          "Erro ao buscar recursos disponíveis:",
+          err
+        );
+
+        return res.status(500).json({
+          message:
+            "Erro ao verificar a disponibilidade dos recursos."
+        });
+      }
+
+      res.json(resultado);
+    }
+  );
+});
+
+
+// ===============================
+// TODOS OS RECURSOS
+// ===============================
 router.get("/", (req, res) => {
   const { tipo } = req.query;
 
@@ -56,6 +143,7 @@ router.get("/", (req, res) => {
   db.query(sql, params, (err, resultado) => {
     if (err) {
       console.log(err);
+
       return res.status(500).json({
         message: "Erro ao buscar recursos."
       });
@@ -82,7 +170,8 @@ router.post("/", (req, res) => {
 
   if (!nome || !tipoRecurso) {
     return res.status(400).json({
-      message: "Nome e tipo do recurso são obrigatórios."
+      message:
+        "Nome e tipo do recurso são obrigatórios."
     });
   }
 
@@ -94,7 +183,8 @@ router.post("/", (req, res) => {
     });
   }
 
-  const idRecurso = "R" + Date.now().toString().slice(-6);
+  const idRecurso =
+    "R" + Date.now().toString().slice(-6);
 
   const sql = `
     INSERT INTO recurso
@@ -126,17 +216,22 @@ router.post("/", (req, res) => {
     ],
     (err) => {
       if (err) {
-        console.log("ERRO SQL COMPLETO:", err);
+        console.log(
+          "ERRO SQL COMPLETO:",
+          err
+        );
 
         return res.status(500).json({
-          message: "Erro ao cadastrar recurso.",
+          message:
+            "Erro ao cadastrar recurso.",
           erro: err.message
         });
       }
 
       res.status(201).json({
         ok: true,
-        message: "Recurso cadastrado com sucesso!",
+        message:
+          "Recurso cadastrado com sucesso!",
         idRecurso
       });
     }
@@ -156,13 +251,15 @@ router.delete("/:id", (req, res) => {
         console.log(err);
 
         return res.status(500).json({
-          message: "Erro ao excluir recurso."
+          message:
+            "Erro ao excluir recurso."
         });
       }
 
       res.json({
         ok: true,
-        message: "Recurso excluído com sucesso!"
+        message:
+          "Recurso excluído com sucesso!"
       });
     }
   );
@@ -210,13 +307,15 @@ router.put("/:id", (req, res) => {
         console.log(err);
 
         return res.status(500).json({
-          message: "Erro ao atualizar recurso."
+          message:
+            "Erro ao atualizar recurso."
         });
       }
 
       res.json({
         ok: true,
-        message: "Recurso atualizado com sucesso!"
+        message:
+          "Recurso atualizado com sucesso!"
       });
     }
   );

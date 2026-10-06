@@ -1,870 +1,1300 @@
-import React, { useState } from "react";
-
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  Pressable,
   StyleSheet,
-  Image,
-  Platform,
+  TouchableOpacity,
   ScrollView,
-  KeyboardAvoidingView,
-  Alert
+  Platform,
+  Alert,
+  TextInput,
+  ActivityIndicator,
 } from "react-native";
-
-import { SafeAreaView } from "react-native-safe-area-context";
-
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { useWindowDimensions } from "react-native";
 
-import API_URL from "../services/api";
-
-const formatTime = (date) => {
-  const h = String(date.getHours()).padStart(2, "0");
-  const m = String(date.getMinutes()).padStart(2, "0");
-
-  return `${h}:${m}:00`;
-};
-
-const formatDate = (date) => {
-  const ano = date.getFullYear();
-  const mes = String(date.getMonth() + 1).padStart(2, "0");
-  const dia = String(date.getDate()).padStart(2, "0");
-
-  return `${ano}-${mes}-${dia}`;
-};
-
-const dataSemHora = (date) => {
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate()
-  );
-};
-
-const obterMinutosDoDia = (date) => {
-  return (
-    date.getHours() * 60 +
-    date.getMinutes()
-  );
-};
-
-const mostrarErro = (titulo, mensagem) => {
-  if (Platform.OS === "web") {
-    window.alert(`${titulo}\n\n${mensagem}`);
-  } else {
-    Alert.alert(titulo, mensagem);
-  }
-};
+const API_URL = "http://localhost:3000";
 
 export default function ReservaScreen({ navigation, route }) {
-  const usuario = route?.params?.usuario;
+  const { width } = useWindowDimensions();
 
-  const nome = usuario?.nome || "";
-  const matricula = usuario?.matricula || "";
+  const usuario = route?.params?.usuario || {};
+
+  const nome =
+    usuario.nome ||
+    usuario.nomeUsuario ||
+    usuario.nomeCompleto ||
+    "";
+
+  const matricula =
+    usuario.matricula ||
+    usuario.idUsuario ||
+    "";
 
   const [tipo, setTipo] = useState("");
   const [recurso, setRecurso] = useState("");
+
   const [listaRecursos, setListaRecursos] = useState([]);
 
-  const [tipoAberto, setTipoAberto] = useState(false);
-  const [recursoAberto, setRecursoAberto] = useState(false);
+  const [mostrarTipos, setMostrarTipos] = useState(false);
+  const [mostrarRecursos, setMostrarRecursos] = useState(false);
 
   const [data, setData] = useState(new Date());
-  const [horaInicio, setHoraInicio] = useState(new Date());
-  const [horaFim, setHoraFim] = useState(
-    new Date(Date.now() + 60 * 60 * 1000)
-  );
+  const [horaInicio, setHoraInicio] = useState(() => {
+    const agora = new Date();
+    agora.setMinutes(agora.getMinutes() + 30);
+    agora.setSeconds(0);
+    agora.setMilliseconds(0);
+    return agora;
+  });
 
-  const [showDate, setShowDate] = useState(false);
-  const [showInicio, setShowInicio] = useState(false);
-  const [showFim, setShowFim] = useState(false);
+  const [horaFim, setHoraFim] = useState(() => {
+    const agora = new Date();
+    agora.setMinutes(agora.getMinutes() + 90);
+    agora.setSeconds(0);
+    agora.setMilliseconds(0);
+    return agora;
+  });
 
-  const buscarRecursos = async (tipoSelecionado) => {
+  const [mostrarData, setMostrarData] = useState(false);
+  const [mostrarHoraInicio, setMostrarHoraInicio] = useState(false);
+  const [mostrarHoraFim, setMostrarHoraFim] = useState(false);
+
+  const [carregandoRecursos, setCarregandoRecursos] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+
+  const tipos = [
+    {
+      valor: "Sala",
+      label: "Sala",
+    },
+    {
+      valor: "Laboratório",
+      label: "Laboratório",
+    },
+    {
+      valor: "Equipamento",
+      label: "Equipamento",
+    },
+  ];
+
+  function mostrarAlerta(titulo, mensagem) {
+    if (Platform.OS === "web") {
+      window.alert(`${titulo}\n\n${mensagem}`);
+    } else {
+      Alert.alert(titulo, mensagem);
+    }
+  }
+
+  function formatDate(date) {
+    const ano = date.getFullYear();
+    const mes = String(date.getMonth() + 1).padStart(2, "0");
+    const dia = String(date.getDate()).padStart(2, "0");
+
+    return `${ano}-${mes}-${dia}`;
+  }
+
+  function formatDateBR(date) {
+    const dia = String(date.getDate()).padStart(2, "0");
+    const mes = String(date.getMonth() + 1).padStart(2, "0");
+    const ano = date.getFullYear();
+
+    return `${dia}/${mes}/${ano}`;
+  }
+
+  function formatTime(date) {
+    const horas = String(date.getHours()).padStart(2, "0");
+    const minutos = String(date.getMinutes()).padStart(2, "0");
+
+    return `${horas}:${minutos}:00`;
+  }
+
+  function formatTimeBR(date) {
+    const horas = String(date.getHours()).padStart(2, "0");
+    const minutos = String(date.getMinutes()).padStart(2, "0");
+
+    return `${horas}:${minutos}`;
+  }
+
+  function converterMinutos(date) {
+    return date.getHours() * 60 + date.getMinutes();
+  }
+
+  function mesmoDiaHoje(date) {
+    const hoje = new Date();
+
+    return (
+      date.getFullYear() === hoje.getFullYear() &&
+      date.getMonth() === hoje.getMonth() &&
+      date.getDate() === hoje.getDate()
+    );
+  }
+
+  function dataAnteriorHoje(date) {
+    const hoje = new Date();
+
+    const dataComparacao = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate()
+    );
+
+    const hojeComparacao = new Date(
+      hoje.getFullYear(),
+      hoje.getMonth(),
+      hoje.getDate()
+    );
+
+    return dataComparacao < hojeComparacao;
+  }
+
+  function intervaloValido(inicio, fim) {
+    const inicioMinutos = converterMinutos(inicio);
+    const fimMinutos = converterMinutos(fim);
+
+    if (fimMinutos <= inicioMinutos) {
+      return false;
+    }
+
+    const duracao = fimMinutos - inicioMinutos;
+
+    return duracao >= 30;
+  }
+
+  async function buscarRecursosDisponiveis({
+    tipoSelecionado = tipo,
+    dataSelecionada = data,
+    inicioSelecionado = horaInicio,
+    fimSelecionado = horaFim,
+  } = {}) {
+    if (!tipoSelecionado) {
+      setListaRecursos([]);
+      setRecurso("");
+      return;
+    }
+
+    if (dataAnteriorHoje(dataSelecionada)) {
+      setListaRecursos([]);
+      setRecurso("");
+      return;
+    }
+
+    if (!intervaloValido(inicioSelecionado, fimSelecionado)) {
+      setListaRecursos([]);
+      setRecurso("");
+      return;
+    }
+
     try {
-      const res = await fetch(
-        `${API_URL}/recursos?tipo=${encodeURIComponent(
-          tipoSelecionado
-        )}`
-      );
+      setCarregandoRecursos(true);
 
-      const json = await res.json();
+      const dataFormatada = formatDate(dataSelecionada);
+      const horaRetirada = formatTime(inicioSelecionado);
+      const horaDevolucao = formatTime(fimSelecionado);
 
-      const recursos = Array.isArray(json)
-        ? json
-        : json.recursos || [];
+      const url =
+        `${API_URL}/recursos/disponiveis` +
+        `?tipo=${encodeURIComponent(tipoSelecionado)}` +
+        `&data=${encodeURIComponent(dataFormatada)}` +
+        `&horaRetirada=${encodeURIComponent(horaRetirada)}` +
+        `&horaDevolucao=${encodeURIComponent(horaDevolucao)}`;
+
+      const resposta = await fetch(url);
+
+      const texto = await resposta.text();
+
+      let dados;
+
+      try {
+        dados = JSON.parse(texto);
+      } catch (erro) {
+        console.log("Resposta inválida do servidor:", texto);
+
+        throw new Error(
+          "O servidor retornou uma resposta inválida."
+        );
+      }
+
+      if (!resposta.ok) {
+        throw new Error(
+          dados?.mensagem ||
+            dados?.erro ||
+            "Não foi possível buscar os recursos disponíveis."
+        );
+      }
+
+      const recursos = Array.isArray(dados)
+        ? dados
+        : Array.isArray(dados.recursos)
+        ? dados.recursos
+        : [];
 
       setListaRecursos(recursos);
-    } catch (err) {
-      console.log("Erro ao buscar recursos:", err);
 
-      mostrarErro(
+      if (
+        recurso &&
+        !recursos.some(
+          (item) => String(item.idRecurso) === String(recurso)
+        )
+      ) {
+        setRecurso("");
+      }
+    } catch (erro) {
+      console.log("Erro ao buscar recursos disponíveis:", erro);
+
+      setListaRecursos([]);
+      setRecurso("");
+
+      mostrarAlerta(
         "Erro",
-        "Não foi possível carregar os recursos."
+        erro.message ||
+          "Não foi possível carregar os recursos disponíveis."
       );
+    } finally {
+      setCarregandoRecursos(false);
     }
-  };
+  }
 
-  const selecionarTipo = (valor) => {
+  function selecionarTipo(valor) {
     setTipo(valor);
     setRecurso("");
-    setListaRecursos([]);
-    setTipoAberto(false);
-    setRecursoAberto(false);
+    setMostrarTipos(false);
+    setMostrarRecursos(false);
 
-    buscarRecursos(valor);
-  };
+    buscarRecursosDisponiveis({
+      tipoSelecionado: valor,
+      dataSelecionada: data,
+      inicioSelecionado: horaInicio,
+      fimSelecionado: horaFim,
+    });
+  }
 
-  const selecionarRecurso = (valor) => {
-    setRecurso(valor);
-    setRecursoAberto(false);
-  };
+  function selecionarRecurso(id) {
+    setRecurso(String(id));
+    setMostrarRecursos(false);
+  }
 
-  const nomeTipo = (valor) => {
-    if (valor === "Sala") return "Sala";
-    if (valor === "Laboratório") return "Laboratório";
-    if (valor === "Equipamento") return "Equipamento";
+  function alterarData(event, selectedDate) {
+    setMostrarData(false);
 
-    return "Selecione o tipo de recurso";
-  };
+    if (!selectedDate) {
+      return;
+    }
 
-  const nomeRecurso = (id) => {
-    const encontrado = listaRecursos.find(
-      (item) => item.idRecurso === id
-    );
+    setData(selectedDate);
+    setRecurso("");
 
-    return encontrado?.nome || "Selecione o recurso";
-  };
+    buscarRecursosDisponiveis({
+      tipoSelecionado: tipo,
+      dataSelecionada: selectedDate,
+      inicioSelecionado: horaInicio,
+      fimSelecionado: horaFim,
+    });
+  }
 
-  const validarReserva = () => {
+  function alterarHoraInicio(event, selectedTime) {
+    setMostrarHoraInicio(false);
+
+    if (!selectedTime) {
+      return;
+    }
+
+    setHoraInicio(selectedTime);
+    setRecurso("");
+
+    buscarRecursosDisponiveis({
+      tipoSelecionado: tipo,
+      dataSelecionada: data,
+      inicioSelecionado: selectedTime,
+      fimSelecionado: horaFim,
+    });
+  }
+
+  function alterarHoraFim(event, selectedTime) {
+    setMostrarHoraFim(false);
+
+    if (!selectedTime) {
+      return;
+    }
+
+    setHoraFim(selectedTime);
+    setRecurso("");
+
+    buscarRecursosDisponiveis({
+      tipoSelecionado: tipo,
+      dataSelecionada: data,
+      inicioSelecionado: horaInicio,
+      fimSelecionado: selectedTime,
+    });
+  }
+
+  function validarReserva() {
+    if (!nome.trim()) {
+      mostrarAlerta(
+        "Atenção",
+        "Não foi possível identificar o nome do usuário."
+      );
+      return false;
+    }
+
+    if (!matricula) {
+      mostrarAlerta(
+        "Atenção",
+        "Não foi possível identificar o usuário."
+      );
+      return false;
+    }
+
+    if (!tipo) {
+      mostrarAlerta(
+        "Atenção",
+        "Selecione o tipo de recurso."
+      );
+      return false;
+    }
+
+    if (!recurso) {
+      mostrarAlerta(
+        "Atenção",
+        "Selecione um recurso disponível."
+      );
+      return false;
+    }
+
+    if (dataAnteriorHoje(data)) {
+      mostrarAlerta(
+        "Data inválida",
+        "Não é possível fazer uma reserva para uma data anterior a hoje."
+      );
+      return false;
+    }
+
     const agora = new Date();
 
-    const hoje = dataSemHora(agora);
-    const dataSelecionada = dataSemHora(data);
+    if (mesmoDiaHoje(data)) {
+      const inicioMinutos = converterMinutos(horaInicio);
+      const agoraMinutos =
+        agora.getHours() * 60 + agora.getMinutes();
 
-    if (dataSelecionada < hoje) {
-      mostrarErro(
-        "Data inválida",
-        "Não é possível fazer uma reserva para uma data passada."
-      );
-
-      return false;
+      if (inicioMinutos <= agoraMinutos) {
+        mostrarAlerta(
+          "Horário inválido",
+          "Para reservas de hoje, o horário de retirada deve ser posterior ao horário atual."
+        );
+        return false;
+      }
     }
 
-    const inicio = new Date(
-      data.getFullYear(),
-      data.getMonth(),
-      data.getDate(),
-      horaInicio.getHours(),
-      horaInicio.getMinutes(),
-      0
-    );
+    const inicioMinutos = converterMinutos(horaInicio);
+    const fimMinutos = converterMinutos(horaFim);
 
-    const fim = new Date(
-      data.getFullYear(),
-      data.getMonth(),
-      data.getDate(),
-      horaFim.getHours(),
-      horaFim.getMinutes(),
-      0
-    );
-
-    const minutosAgora =
-      obterMinutosDoDia(agora);
-
-    const minutosInicio =
-      obterMinutosDoDia(horaInicio);
-
-    if (
-      dataSelecionada.getTime() === hoje.getTime() &&
-      minutosInicio < minutosAgora
-    ) {
-      mostrarErro(
+    if (fimMinutos <= inicioMinutos) {
+      mostrarAlerta(
         "Horário inválido",
-        "A hora de retirada já passou. Escolha o horário atual ou um horário futuro."
+        "O horário de devolução deve ser posterior ao horário de retirada."
       );
-
       return false;
     }
 
-    if (fim <= inicio) {
-      mostrarErro(
+    const duracao = fimMinutos - inicioMinutos;
+
+    if (duracao < 30) {
+      mostrarAlerta(
         "Horário inválido",
-        "A hora de devolução deve ser depois da hora de retirada."
-      );
-
-      return false;
-    }
-
-    const duracaoMinutos =
-      (fim.getTime() - inicio.getTime()) /
-      (1000 * 60);
-
-    if (duracaoMinutos < 30) {
-      mostrarErro(
-        "Duração inválida",
         "A reserva deve ter duração mínima de 30 minutos."
       );
+      return false;
+    }
+
+    if (listaRecursos.length === 0) {
+      mostrarAlerta(
+        "Recurso indisponível",
+        "Não existem recursos disponíveis para esse tipo, data e horário."
+      );
+      return false;
+    }
+
+    const recursoExiste = listaRecursos.some(
+      (item) => String(item.idRecurso) === String(recurso)
+    );
+
+    if (!recursoExiste) {
+      mostrarAlerta(
+        "Recurso indisponível",
+        "O recurso selecionado não está mais disponível para esse horário. Escolha outro recurso."
+      );
+
+      setRecurso("");
+
+      buscarRecursosDisponiveis();
 
       return false;
     }
 
     return true;
-  };
+  }
 
-  const salvarReserva = async () => {
-    if (!nome || !matricula || !tipo || !recurso) {
-      mostrarErro(
-        "Campos obrigatórios",
-        "Preencha todos os campos obrigatórios."
-      );
-
-      return;
-    }
-
-    if (!usuario?.idUsuario) {
-      mostrarErro(
-        "Usuário não identificado",
-        "Faça login novamente para realizar uma reserva."
-      );
-
-      return;
-    }
-
+  async function realizarReserva() {
     if (!validarReserva()) {
       return;
     }
 
     try {
-      const payload = {
+      setSalvando(true);
+
+      const dadosReserva = {
         responsavelNome: nome,
         responsavelMatricula: matricula,
         reservaData: formatDate(data),
         horaRetirada: formatTime(horaInicio),
         horaDevolucao: formatTime(horaFim),
         idUsuario: usuario.idUsuario,
-        idRecurso: recurso
+        idRecurso: recurso,
       };
 
-      const res = await fetch(`${API_URL}/reservas`, {
+      console.log("Enviando reserva:", dadosReserva);
+
+      const resposta = await fetch(`${API_URL}/reservas`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(dadosReserva),
       });
 
-      const json = await res.json();
+      const texto = await resposta.text();
 
-      if (!res.ok) {
-        mostrarErro(
-          "Não foi possível realizar a reserva",
-          json.message ||
-            "Ocorreu um erro ao criar a reserva."
+      let dados;
+
+      try {
+        dados = JSON.parse(texto);
+      } catch (erro) {
+        console.log("Resposta inválida do servidor:", texto);
+
+        throw new Error(
+          "O servidor retornou uma resposta inválida."
         );
-
-        return;
       }
 
-      mostrarErro(
-        "Reserva realizada",
-        `Reserva criada com sucesso!\n\nCódigo: ${json.codigoReserva}`
+      if (!resposta.ok) {
+        if (resposta.status === 409) {
+          setRecurso("");
+
+          await buscarRecursosDisponiveis();
+
+          throw new Error(
+            dados?.mensagem ||
+              "Esse recurso acabou de ser reservado por outra pessoa para esse horário."
+          );
+        }
+
+        throw new Error(
+          dados?.mensagem ||
+            dados?.erro ||
+            "Não foi possível realizar a reserva."
+        );
+      }
+
+      mostrarAlerta(
+        "Reserva realizada!",
+        `Sua reserva foi criada com sucesso.\n\nCódigo da reserva: ${
+          dados.codigoReserva || "Gerado pelo sistema"
+        }`
       );
+
+      setTipo("");
+      setRecurso("");
+      setListaRecursos([]);
 
       navigation.goBack();
-    } catch (err) {
-      console.log("Erro ao salvar reserva:", err);
+    } catch (erro) {
+      console.log("Erro ao realizar reserva:", erro);
 
-      mostrarErro(
+      mostrarAlerta(
         "Erro",
-        "Não foi possível salvar a reserva."
+        erro.message ||
+          "Não foi possível realizar a reserva."
       );
+    } finally {
+      setSalvando(false);
     }
-  };
+  }
 
-  const alterarData = (event, selectedDate) => {
-    setShowDate(false);
+  useEffect(() => {
+    setRecurso("");
 
-    if (selectedDate) {
-      setData(selectedDate);
+    if (tipo && intervaloValido(horaInicio, horaFim)) {
+      buscarRecursosDisponiveis({
+        tipoSelecionado: tipo,
+        dataSelecionada: data,
+        inicioSelecionado: horaInicio,
+        fimSelecionado: horaFim,
+      });
+    } else {
+      setListaRecursos([]);
     }
-  };
+  }, []);
 
-  const alterarHoraInicio = (event, selectedTime) => {
-    setShowInicio(false);
+  const recursoSelecionado = listaRecursos.find(
+    (item) => String(item.idRecurso) === String(recurso)
+  );
 
-    if (selectedTime) {
-      setHoraInicio(selectedTime);
-    }
-  };
-
-  const alterarHoraFim = (event, selectedTime) => {
-    setShowFim(false);
-
-    if (selectedTime) {
-      setHoraFim(selectedTime);
-    }
-  };
-
-  const dataWeb = formatDate(data);
-
-  const horaInicioWeb = `${String(
-    horaInicio.getHours()
-  ).padStart(2, "0")}:${String(
-    horaInicio.getMinutes()
-  ).padStart(2, "0")}`;
-
-  const horaFimWeb = `${String(
-    horaFim.getHours()
-  ).padStart(2, "0")}:${String(
-    horaFim.getMinutes()
-  ).padStart(2, "0")}`;
-
-  const atualizarDataWeb = (event) => {
-    const valor = event.target.value;
-
-    if (!valor) return;
-
-    const [ano, mes, dia] = valor
-      .split("-")
-      .map(Number);
-
-    const novaData = new Date(
-      ano,
-      mes - 1,
-      dia,
-      data.getHours(),
-      data.getMinutes()
-    );
-
-    setData(novaData);
-  };
-
-  const atualizarHoraInicioWeb = (event) => {
-    const valor = event.target.value;
-
-    if (!valor) return;
-
-    const [hora, minuto] = valor
-      .split(":")
-      .map(Number);
-
-    const novaHora = new Date(horaInicio);
-
-    novaHora.setHours(hora);
-    novaHora.setMinutes(minuto);
-    novaHora.setSeconds(0);
-    novaHora.setMilliseconds(0);
-
-    setHoraInicio(novaHora);
-  };
-
-  const atualizarHoraFimWeb = (event) => {
-    const valor = event.target.value;
-
-    if (!valor) return;
-
-    const [hora, minuto] = valor
-      .split(":")
-      .map(Number);
-
-    const novaHora = new Date(horaFim);
-
-    novaHora.setHours(hora);
-    novaHora.setMinutes(minuto);
-    novaHora.setSeconds(0);
-    novaHora.setMilliseconds(0);
-
-    setHoraFim(novaHora);
-  };
+  const larguraConteudo =
+    width >= 1000 ? 900 : width >= 600 ? 700 : "100%";
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={
-          Platform.OS === "ios"
-            ? "padding"
-            : undefined
-        }
-      >
-        <View style={styles.header}>
-          <Pressable
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Image
-              source={require("../assets/seta.png")}
-              style={styles.backIcon}
-            />
-          </Pressable>
-
-          <Text style={styles.logo}>SISLAB</Text>
-
-          <View style={styles.headerSpace} />
-        </View>
-
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.botaoVoltar}
+          onPress={() => navigation.goBack()}
         >
-          <Text style={styles.title}>
-            Fazer Reserva
+          <Text style={styles.textoVoltar}>‹</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.logo}>SISLAB</Text>
+
+        <View style={{ width: 42 }} />
+      </View>
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View
+          style={[
+            styles.conteudo,
+            {
+              width: larguraConteudo,
+            },
+          ]}
+        >
+          <Text style={styles.titulo}>Fazer Reserva</Text>
+
+          <Text style={styles.subtitulo}>
+            Escolha a data, horário e recurso que deseja reservar.
           </Text>
 
-          <Text style={styles.label}>
-            Nome do responsável
-          </Text>
+          <View style={styles.card}>
+            <Text style={styles.label}>Responsável</Text>
 
-          <View style={styles.inputBloqueado}>
-            <Text style={styles.inputBloqueadoTexto}>
-              {nome}
-            </Text>
-          </View>
-
-          <Text style={styles.label}>
-            Matrícula
-          </Text>
-
-          <View style={styles.inputBloqueado}>
-            <Text style={styles.inputBloqueadoTexto}>
-              {matricula}
-            </Text>
-          </View>
-
-          <Text style={styles.label}>
-            Data de reserva
-          </Text>
-
-          {Platform.OS === "web" ? (
-            <View style={styles.webInputContainer}>
-              <input
-                type="date"
-                value={dataWeb}
-                min={formatDate(new Date())}
-                onChange={atualizarDataWeb}
-                style={styles.webInput}
-              />
+            <View style={styles.campoDesabilitado}>
+              <Text style={styles.valorDesabilitado}>
+                {nome || "Usuário"}
+              </Text>
             </View>
-          ) : (
-            <>
-              <Pressable
-                style={styles.inputCompact}
-                onPress={() => setShowDate(true)}
-              >
-                <Text style={styles.inputText}>
-                  {data.toLocaleDateString("pt-BR")}
-                </Text>
-              </Pressable>
 
-              {showDate && (
-                <DateTimePicker
-                  value={data}
-                  mode="date"
-                  display="default"
-                  minimumDate={new Date()}
-                  onChange={alterarData}
+            <Text style={styles.label}>Matrícula</Text>
+
+            <View style={styles.campoDesabilitado}>
+              <Text style={styles.valorDesabilitado}>
+                {matricula || "Não identificada"}
+              </Text>
+            </View>
+
+            <Text style={styles.label}>Data da reserva</Text>
+
+            {Platform.OS === "web" ? (
+              <View style={styles.campoWeb}>
+                <TextInput
+                  style={styles.inputWeb}
+                  value={formatDate(data)}
+                  onChangeText={(texto) => {
+                    const partes = texto.split("-");
+
+                    if (partes.length !== 3) {
+                      return;
+                    }
+
+                    const ano = Number(partes[0]);
+                    const mes = Number(partes[1]);
+                    const dia = Number(partes[2]);
+
+                    if (
+                      !ano ||
+                      !mes ||
+                      !dia ||
+                      mes < 1 ||
+                      mes > 12 ||
+                      dia < 1 ||
+                      dia > 31
+                    ) {
+                      return;
+                    }
+
+                    const novaData = new Date(
+                      ano,
+                      mes - 1,
+                      dia
+                    );
+
+                    setData(novaData);
+                    setRecurso("");
+
+                    buscarRecursosDisponiveis({
+                      tipoSelecionado: tipo,
+                      dataSelecionada: novaData,
+                      inicioSelecionado: horaInicio,
+                      fimSelecionado: horaFim,
+                    });
+                  }}
+                  placeholder="AAAA-MM-DD"
                 />
-              )}
-            </>
-          )}
+              </View>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={styles.seletor}
+                  onPress={() => setMostrarData(true)}
+                >
+                  <Text style={styles.seletorTexto}>
+                    {formatDateBR(data)}
+                  </Text>
 
-          <View style={styles.horariosContainer}>
-            <View style={styles.horarioColuna}>
-              <Text style={styles.label}>
-                Hora de retirada
-              </Text>
+                  <Text style={styles.seta}>⌄</Text>
+                </TouchableOpacity>
 
-              {Platform.OS === "web" ? (
-                <View style={styles.webInputContainer}>
-                  <input
-                    type="time"
-                    value={horaInicioWeb}
-                    onChange={atualizarHoraInicioWeb}
-                    style={styles.webInput}
+                {mostrarData && (
+                  <DateTimePicker
+                    value={data}
+                    mode="date"
+                    display="default"
+                    minimumDate={new Date()}
+                    onChange={alterarData}
                   />
-                </View>
-              ) : (
-                <>
-                  <Pressable
-                    style={styles.inputCompact}
-                    onPress={() => setShowInicio(true)}
-                  >
-                    <Text style={styles.inputText}>
-                      {horaInicioWeb}
-                    </Text>
-                  </Pressable>
+                )}
+              </>
+            )}
 
-                  {showInicio && (
-                    <DateTimePicker
-                      value={horaInicio}
-                      mode="time"
-                      display="default"
-                      onChange={alterarHoraInicio}
-                    />
-                  )}
-                </>
-              )}
-            </View>
+            {Platform.OS === "web" && (
+              <TouchableOpacity
+                style={styles.botaoDataWeb}
+                onPress={() => setMostrarData(!mostrarData)}
+              >
+                <Text style={styles.botaoDataWebTexto}>
+                  Alterar data
+                </Text>
+              </TouchableOpacity>
+            )}
 
-            <View style={styles.horarioColuna}>
-              <Text style={styles.label}>
-                Hora de devolução
-              </Text>
+            {Platform.OS === "web" && mostrarData && (
+              <View style={styles.avisoWeb}>
+                <Text style={styles.avisoWebTexto}>
+                  Digite a data no formato AAAA-MM-DD.
+                </Text>
+              </View>
+            )}
 
-              {Platform.OS === "web" ? (
-                <View style={styles.webInputContainer}>
-                  <input
-                    type="time"
-                    value={horaFimWeb}
-                    onChange={atualizarHoraFimWeb}
-                    style={styles.webInput}
+            <Text style={styles.label}>Hora de retirada</Text>
+
+            {Platform.OS === "web" ? (
+              <View style={styles.campoWeb}>
+                <TextInput
+                  style={styles.inputWeb}
+                  value={formatTimeBR(horaInicio)}
+                  onChangeText={(texto) => {
+                    const partes = texto.split(":");
+
+                    if (partes.length !== 2) {
+                      return;
+                    }
+
+                    const horas = Number(partes[0]);
+                    const minutos = Number(partes[1]);
+
+                    if (
+                      Number.isNaN(horas) ||
+                      Number.isNaN(minutos) ||
+                      horas < 0 ||
+                      horas > 23 ||
+                      minutos < 0 ||
+                      minutos > 59
+                    ) {
+                      return;
+                    }
+
+                    const novaHora = new Date(horaInicio);
+                    novaHora.setHours(horas);
+                    novaHora.setMinutes(minutos);
+                    novaHora.setSeconds(0);
+                    novaHora.setMilliseconds(0);
+
+                    setHoraInicio(novaHora);
+                    setRecurso("");
+
+                    buscarRecursosDisponiveis({
+                      tipoSelecionado: tipo,
+                      dataSelecionada: data,
+                      inicioSelecionado: novaHora,
+                      fimSelecionado: horaFim,
+                    });
+                  }}
+                  placeholder="HH:MM"
+                />
+              </View>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={styles.seletor}
+                  onPress={() => setMostrarHoraInicio(true)}
+                >
+                  <Text style={styles.seletorTexto}>
+                    {formatTimeBR(horaInicio)}
+                  </Text>
+
+                  <Text style={styles.seta}>⌄</Text>
+                </TouchableOpacity>
+
+                {mostrarHoraInicio && (
+                  <DateTimePicker
+                    value={horaInicio}
+                    mode="time"
+                    display="default"
+                    onChange={alterarHoraInicio}
                   />
-                </View>
-              ) : (
-                <>
-                  <Pressable
-                    style={styles.inputCompact}
-                    onPress={() => setShowFim(true)}
-                  >
-                    <Text style={styles.inputText}>
-                      {horaFimWeb}
-                    </Text>
-                  </Pressable>
+                )}
+              </>
+            )}
 
-                  {showFim && (
-                    <DateTimePicker
-                      value={horaFim}
-                      mode="time"
-                      display="default"
-                      onChange={alterarHoraFim}
-                    />
-                  )}
-                </>
-              )}
-            </View>
-          </View>
+            <Text style={styles.label}>Hora de devolução</Text>
 
-          <Text style={styles.label}>
-            Tipo de Recurso
-          </Text>
+            {Platform.OS === "web" ? (
+              <View style={styles.campoWeb}>
+                <TextInput
+                  style={styles.inputWeb}
+                  value={formatTimeBR(horaFim)}
+                  onChangeText={(texto) => {
+                    const partes = texto.split(":");
 
-          <View style={styles.dropdownContainer}>
-            <Pressable
-              style={styles.dropdown}
+                    if (partes.length !== 2) {
+                      return;
+                    }
+
+                    const horas = Number(partes[0]);
+                    const minutos = Number(partes[1]);
+
+                    if (
+                      Number.isNaN(horas) ||
+                      Number.isNaN(minutos) ||
+                      horas < 0 ||
+                      horas > 23 ||
+                      minutos < 0 ||
+                      minutos > 59
+                    ) {
+                      return;
+                    }
+
+                    const novaHora = new Date(horaFim);
+                    novaHora.setHours(horas);
+                    novaHora.setMinutes(minutos);
+                    novaHora.setSeconds(0);
+                    novaHora.setMilliseconds(0);
+
+                    setHoraFim(novaHora);
+                    setRecurso("");
+
+                    buscarRecursosDisponiveis({
+                      tipoSelecionado: tipo,
+                      dataSelecionada: data,
+                      inicioSelecionado: horaInicio,
+                      fimSelecionado: novaHora,
+                    });
+                  }}
+                  placeholder="HH:MM"
+                />
+              </View>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={styles.seletor}
+                  onPress={() => setMostrarHoraFim(true)}
+                >
+                  <Text style={styles.seletorTexto}>
+                    {formatTimeBR(horaFim)}
+                  </Text>
+
+                  <Text style={styles.seta}>⌄</Text>
+                </TouchableOpacity>
+
+                {mostrarHoraFim && (
+                  <DateTimePicker
+                    value={horaFim}
+                    mode="time"
+                    display="default"
+                    onChange={alterarHoraFim}
+                  />
+                )}
+              </>
+            )}
+
+            <Text style={styles.label}>Tipo de recurso</Text>
+
+            <TouchableOpacity
+              style={styles.seletor}
               onPress={() => {
-                setTipoAberto(!tipoAberto);
-                setRecursoAberto(false);
+                setMostrarTipos(!mostrarTipos);
+                setMostrarRecursos(false);
               }}
             >
-              <Text style={styles.dropdownText}>
-                {nomeTipo(tipo)}
+              <Text
+                style={[
+                  styles.seletorTexto,
+                  !tipo && styles.placeholder,
+                ]}
+              >
+                {tipo || "Selecione o tipo"}
               </Text>
 
-              <Text style={styles.arrow}>
-                {tipoAberto ? "▲" : "▼"}
-              </Text>
-            </Pressable>
+              <Text style={styles.seta}>⌄</Text>
+            </TouchableOpacity>
 
-            {tipoAberto && (
-              <View style={styles.dropdownList}>
-                {[
-                  "Sala",
-                  "Laboratório",
-                  "Equipamento"
-                ].map((item) => (
-                  <Pressable
-                    key={item}
-                    style={styles.dropdownItem}
-                    onPress={() =>
-                      selecionarTipo(item)
-                    }
+            {mostrarTipos && (
+              <View style={styles.dropdown}>
+                {tipos.map((item) => (
+                  <TouchableOpacity
+                    key={item.valor}
+                    style={styles.opcao}
+                    onPress={() => selecionarTipo(item.valor)}
                   >
-                    <Text style={styles.dropdownItemText}>
-                      {item}
+                    <Text style={styles.opcaoTexto}>
+                      {item.label}
                     </Text>
-                  </Pressable>
+                  </TouchableOpacity>
                 ))}
               </View>
             )}
-          </View>
 
-          <Text style={styles.label}>
-            Recurso
-          </Text>
+            <Text style={styles.label}>Recurso</Text>
 
-          <View style={styles.dropdownContainer}>
-            <Pressable
-              style={styles.dropdown}
+            <TouchableOpacity
+              style={[
+                styles.seletor,
+                (!tipo ||
+                  carregandoRecursos ||
+                  listaRecursos.length === 0) &&
+                  styles.seletorDesabilitado,
+              ]}
+              disabled={
+                !tipo ||
+                carregandoRecursos ||
+                listaRecursos.length === 0
+              }
               onPress={() => {
-                if (listaRecursos.length > 0) {
-                  setRecursoAberto(!recursoAberto);
-                  setTipoAberto(false);
-                }
+                setMostrarRecursos(!mostrarRecursos);
+                setMostrarTipos(false);
               }}
             >
-              <Text style={styles.dropdownText}>
-                {recurso
-                  ? nomeRecurso(recurso)
-                  : "Selecione o recurso"}
-              </Text>
+              {carregandoRecursos ? (
+                <View style={styles.carregandoLinha}>
+                  <ActivityIndicator
+                    size="small"
+                    color="#007A33"
+                  />
 
-              <Text style={styles.arrow}>
-                {recursoAberto ? "▲" : "▼"}
-              </Text>
-            </Pressable>
+                  <Text style={styles.carregandoTexto}>
+                    Buscando recursos disponíveis...
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <Text
+                    style={[
+                      styles.seletorTexto,
+                      !recurso && styles.placeholder,
+                    ]}
+                  >
+                    {recursoSelecionado
+                      ? recursoSelecionado.nome
+                      : !tipo
+                      ? "Selecione o tipo primeiro"
+                      : listaRecursos.length === 0
+                      ? "Nenhum recurso disponível"
+                      : "Selecione o recurso"}
+                  </Text>
 
-            {recursoAberto && (
-              <View style={styles.dropdownList}>
-                {listaRecursos.length > 0 ? (
-                  listaRecursos.map((item) => (
-                    <Pressable
+                  <Text style={styles.seta}>⌄</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {mostrarRecursos &&
+              listaRecursos.length > 0 && (
+                <View style={styles.dropdown}>
+                  {listaRecursos.map((item) => (
+                    <TouchableOpacity
                       key={item.idRecurso}
-                      style={styles.dropdownItem}
+                      style={styles.opcao}
                       onPress={() =>
-                        selecionarRecurso(
-                          item.idRecurso
-                        )
+                        selecionarRecurso(item.idRecurso)
                       }
                     >
-                      <Text
-                        style={
-                          styles.dropdownItemText
-                        }
-                      >
+                      <Text style={styles.opcaoTexto}>
                         {item.nome}
                       </Text>
-                    </Pressable>
-                  ))
-                ) : (
-                  <View style={styles.emptyItem}>
-                    <Text style={styles.emptyText}>
-                      Nenhum recurso disponível.
-                    </Text>
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
 
-          <Pressable
-            style={styles.button}
-            onPress={salvarReserva}
-          >
-            <Text style={styles.buttonText}>
-              Reservar
-            </Text>
-          </Pressable>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+                      {item.localizacao ? (
+                        <Text style={styles.opcaoDetalhe}>
+                          {item.localizacao}
+                        </Text>
+                      ) : null}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+            {tipo &&
+              !carregandoRecursos &&
+              listaRecursos.length === 0 &&
+              intervaloValido(horaInicio, horaFim) && (
+                <View style={styles.avisoIndisponibilidade}>
+                  <Text style={styles.avisoIndisponibilidadeTexto}>
+                    Nenhum {tipo.toLowerCase()} está disponível
+                    para a data e horário selecionados.
+                  </Text>
+                </View>
+              )}
+
+            {tipo &&
+              !intervaloValido(horaInicio, horaFim) && (
+                <View style={styles.avisoHorario}>
+                  <Text style={styles.avisoHorarioTexto}>
+                    Escolha um horário de devolução pelo menos
+                    30 minutos após o horário de retirada para
+                    consultar os recursos disponíveis.
+                  </Text>
+                </View>
+              )}
+
+            <TouchableOpacity
+              style={[
+                styles.botaoReservar,
+                salvando && styles.botaoDesabilitado,
+              ]}
+              disabled={salvando}
+              onPress={realizarReserva}
+            >
+              {salvando ? (
+                <View style={styles.carregandoBotao}>
+                  <ActivityIndicator
+                    size="small"
+                    color="#FFFFFF"
+                  />
+
+                  <Text style={styles.textoBotao}>
+                    Realizando reserva...
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.textoBotao}>
+                  Confirmar Reserva
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.botaoCancelar}
+              onPress={() => navigation.goBack()}
+              disabled={salvando}
+            >
+              <Text style={styles.textoCancelar}>
+                Cancelar
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#ccfce4"
-  },
-
   container: {
     flex: 1,
-    backgroundColor: "#ccfce4"
+    backgroundColor: "#ccfce4",
   },
 
   header: {
-    height: 75,
-    backgroundColor: "#FFF",
+    height: 72,
+    backgroundColor: "#FFFFFF",
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 30
+    justifyContent: "space-between",
+    paddingHorizontal: 22,
+    borderBottomWidth: 1,
+    borderBottomColor: "#d9eee4",
   },
 
-  backButton: {
-    width: 40,
-    height: 40,
+  botaoVoltar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#e3f7ed",
+    alignItems: "center",
     justifyContent: "center",
-    alignItems: "flex-start"
   },
 
-  headerSpace: {
-    width: 40
+  textoVoltar: {
+    fontSize: 34,
+    lineHeight: 36,
+    color: "#007A33",
+    marginTop: -3,
   },
 
   logo: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#007A33"
-  },
-
-  backIcon: {
-    width: 28,
-    height: 28,
-    resizeMode: "contain"
+    fontSize: 25,
+    fontWeight: "800",
+    color: "#007A33",
+    letterSpacing: 1,
   },
 
   scroll: {
-    flex: 1
+    flex: 1,
   },
 
-  content: {
-    padding: 30,
-    paddingBottom: 60
+  scrollContent: {
+    alignItems: "center",
+    paddingVertical: 35,
+    paddingHorizontal: 20,
   },
 
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#007A33",
-    marginBottom: 20
+  conteudo: {
+    maxWidth: 900,
+  },
+
+  titulo: {
+    fontSize: 30,
+    fontWeight: "800",
+    color: "#006633",
+    marginBottom: 6,
+  },
+
+  subtitulo: {
+    fontSize: 15,
+    color: "#4f665b",
+    marginBottom: 24,
+  },
+
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 26,
+    shadowColor: "#000000",
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
 
   label: {
-    fontWeight: "bold",
-    marginBottom: 5,
-    marginTop: 2,
-    color: "#333"
-  },
-
-  inputBloqueado: {
-    backgroundColor: "#F1F3F2",
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 12,
-    minHeight: 50,
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#D8DDD9"
-  },
-
-  inputBloqueadoTexto: {
-    fontSize: 16,
-    color: "#444"
-  },
-
-  inputCompact: {
-    backgroundColor: "#FFF",
-    padding: 13,
-    borderRadius: 12,
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#174d35",
     marginBottom: 8,
+    marginTop: 15,
+  },
+
+  campoDesabilitado: {
     minHeight: 48,
-    justifyContent: "center"
+    borderWidth: 1,
+    borderColor: "#d9e8e0",
+    borderRadius: 10,
+    backgroundColor: "#f3f7f5",
+    justifyContent: "center",
+    paddingHorizontal: 14,
   },
 
-  inputText: {
-    color: "#333",
-    fontSize: 16
+  valorDesabilitado: {
+    fontSize: 15,
+    color: "#687a70",
   },
 
-  webInputContainer: {
-    width: "100%",
-    marginBottom: 8
-  },
-
-  webInput: {
-    padding: 13,
-    marginBottom: 0,
-    borderRadius: 12,
-    border: "1px solid #ccc",
-    backgroundColor: "#FFF",
-    boxSizing: "border-box",
-    width: "100%",
+  seletor: {
     minHeight: 48,
-    fontSize: 16,
-    color: "#333"
-  },
-
-  horariosContainer: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 5
-  },
-
-  horarioColuna: {
-    flex: 1,
-    minWidth: 0
-  },
-
-  dropdownContainer: {
-    position: "relative",
-    zIndex: 10,
-    marginBottom: 15
-  },
-
-  dropdown: {
-    backgroundColor: "#FFF",
-    minHeight: 52,
-    borderRadius: 12,
-    paddingHorizontal: 15,
+    borderWidth: 1,
+    borderColor: "#a6e4cf",
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: "#DDD"
   },
 
-  dropdownText: {
-    fontSize: 16,
-    color: "#333",
-    flex: 1
+  seletorDesabilitado: {
+    backgroundColor: "#f3f7f5",
+    borderColor: "#d9e8e0",
   },
 
-  arrow: {
-    fontSize: 14,
+  seletorTexto: {
+    flex: 1,
+    fontSize: 15,
+    color: "#173b2b",
+  },
+
+  placeholder: {
+    color: "#7c8f85",
+  },
+
+  seta: {
+    fontSize: 20,
     color: "#007A33",
-    marginLeft: 10
+    marginLeft: 10,
   },
 
-  dropdownList: {
-    backgroundColor: "#FFF",
-    borderRadius: 12,
+  dropdown: {
     marginTop: 5,
     borderWidth: 1,
-    borderColor: "#DDD",
+    borderColor: "#a6e4cf",
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
     overflow: "hidden",
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 4
   },
 
-  dropdownItem: {
-    paddingVertical: 15,
-    paddingHorizontal: 15,
+  opcao: {
+    paddingHorizontal: 14,
+    paddingVertical: 13,
     borderBottomWidth: 1,
-    borderBottomColor: "#EEE"
+    borderBottomColor: "#edf4f0",
   },
 
-  dropdownItemText: {
-    fontSize: 16,
-    color: "#333"
+  opcaoTexto: {
+    fontSize: 15,
+    color: "#173b2b",
+    fontWeight: "600",
   },
 
-  emptyItem: {
-    padding: 15
+  opcaoDetalhe: {
+    fontSize: 12,
+    color: "#718178",
+    marginTop: 3,
   },
 
-  emptyText: {
-    color: "#777"
-  },
-
-  button: {
-    backgroundColor: "#007A33",
-    padding: 15,
-    borderRadius: 25,
+  carregandoLinha: {
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 15,
-    marginBottom: 10
+    flex: 1,
   },
 
-  buttonText: {
-    color: "#FFF",
-    fontWeight: "bold",
-    fontSize: 16
-  }
+  carregandoTexto: {
+    fontSize: 14,
+    color: "#60756a",
+    marginLeft: 9,
+  },
+
+  avisoIndisponibilidade: {
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: "#fff4df",
+  },
+
+  avisoIndisponibilidadeTexto: {
+    fontSize: 13,
+    color: "#76531c",
+    lineHeight: 19,
+  },
+
+  avisoHorario: {
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: "#eef7f2",
+  },
+
+  avisoHorarioTexto: {
+    fontSize: 13,
+    color: "#456454",
+    lineHeight: 19,
+  },
+
+  campoWeb: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: "#a6e4cf",
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+  },
+
+  inputWeb: {
+    width: "100%",
+    minHeight: 46,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    color: "#173b2b",
+    border: "none",
+    outlineStyle: "none",
+    backgroundColor: "transparent",
+  },
+
+  botaoDataWeb: {
+    alignSelf: "flex-start",
+    marginTop: 7,
+    paddingVertical: 5,
+  },
+
+  botaoDataWebTexto: {
+    fontSize: 13,
+    color: "#007A33",
+    fontWeight: "600",
+  },
+
+  avisoWeb: {
+    marginTop: 5,
+    padding: 8,
+    backgroundColor: "#eef7f2",
+    borderRadius: 8,
+  },
+
+  avisoWebTexto: {
+    fontSize: 12,
+    color: "#557063",
+  },
+
+  botaoReservar: {
+    marginTop: 28,
+    minHeight: 50,
+    borderRadius: 12,
+    backgroundColor: "#007A33",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+
+  botaoDesabilitado: {
+    opacity: 0.7,
+  },
+
+  textoBotao: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "800",
+  },
+
+  carregandoBotao: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  botaoCancelar: {
+    marginTop: 10,
+    minHeight: 46,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#b8d9ca",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  textoCancelar: {
+    color: "#496257",
+    fontSize: 14,
+    fontWeight: "700",
+  },
 });
