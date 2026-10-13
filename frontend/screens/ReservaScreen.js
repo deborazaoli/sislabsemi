@@ -9,7 +9,8 @@ import {
   Platform,
   ScrollView,
   KeyboardAvoidingView,
-  Alert
+  Alert,
+  Modal
 } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -23,6 +24,15 @@ const formatTime = (date) => {
   const m = String(date.getMinutes()).padStart(2, "0");
 
   return `${h}:${m}:00`;
+};
+
+const formatTimeCurto = (date) => {
+  if (!date) return "";
+
+  const h = String(date.getHours()).padStart(2, "0");
+  const m = String(date.getMinutes()).padStart(2, "0");
+
+  return `${h}:${m}`;
 };
 
 const formatDate = (date) => {
@@ -42,10 +52,7 @@ const dataSemHora = (date) => {
 };
 
 const obterMinutosDoDia = (date) => {
-  return (
-    date.getHours() * 60 +
-    date.getMinutes()
-  );
+  return date.getHours() * 60 + date.getMinutes();
 };
 
 const mostrarErro = (titulo, mensagem) => {
@@ -59,6 +66,7 @@ const mostrarErro = (titulo, mensagem) => {
 export default function ReservaScreen({ navigation, route }) {
   const usuario = route?.params?.usuario;
 
+  // Continuam sendo usados no envio da reserva, mas não aparecem mais no formulário
   const nome = usuario?.nome || "";
   const matricula = usuario?.matricula || "";
 
@@ -70,14 +78,66 @@ export default function ReservaScreen({ navigation, route }) {
   const [recursoAberto, setRecursoAberto] = useState(false);
 
   const [data, setData] = useState(new Date());
-  const [horaInicio, setHoraInicio] = useState(new Date());
-  const [horaFim, setHoraFim] = useState(
-    new Date(Date.now() + 60 * 60 * 1000)
-  );
+
+  // Início e fim começam vazios para o usuário escolher
+  const [horaInicio, setHoraInicio] = useState(null);
+  const [horaFim, setHoraFim] = useState(null);
 
   const [showDate, setShowDate] = useState(false);
   const [showInicio, setShowInicio] = useState(false);
   const [showFim, setShowFim] = useState(false);
+
+  // Detalhes da reserva recém-criada (abre a lista/modal)
+  const [reservaCriada, setReservaCriada] = useState(null);
+
+  const horariosSelecionados = () => !!horaInicio && !!horaFim;
+
+  /*
+   * Impede escolher tipo/recurso antes de selecionar os horários.
+   */
+  const exigirHorarios = () => {
+    if (!horariosSelecionados()) {
+      mostrarErro(
+        "Horário não selecionado",
+        "Selecione o horário de início e fim antes de escolher o tipo de reserva e o recurso."
+      );
+
+      return false;
+    }
+
+    return true;
+  };
+
+  /*
+   * Mostra alerta se o intervalo for inválido (fim antes/igual ao início
+   * ou duração menor que 30 minutos). Retorna true se houver erro.
+   */
+  const alertarIntervaloInvalido = (inicio, fim) => {
+    if (!inicio || !fim) return false;
+
+    const minutosInicio = obterMinutosDoDia(inicio);
+    const minutosFim = obterMinutosDoDia(fim);
+
+    if (minutosFim <= minutosInicio) {
+      mostrarErro(
+        "Horário inválido",
+        "A hora de fim deve ser depois da hora de início."
+      );
+
+      return true;
+    }
+
+    if (minutosFim - minutosInicio < 30) {
+      mostrarErro(
+        "Duração inválida",
+        "A reserva deve ter duração mínima de 30 minutos."
+      );
+
+      return true;
+    }
+
+    return false;
+  };
 
   /*
    * Busca somente os recursos que estão disponíveis
@@ -89,7 +149,7 @@ export default function ReservaScreen({ navigation, route }) {
     inicioSelecionado = horaInicio,
     fimSelecionado = horaFim
   } = {}) => {
-    if (!tipoSelecionado) {
+    if (!tipoSelecionado || !inicioSelecionado || !fimSelecionado) {
       setListaRecursos([]);
       setRecurso("");
       return;
@@ -100,36 +160,21 @@ export default function ReservaScreen({ navigation, route }) {
     const hoje = dataSemHora(agora);
     const dataConsulta = dataSemHora(dataSelecionada);
 
-    /*
-     * Não consulta o backend se a data já passou.
-     */
     if (dataConsulta < hoje) {
       setListaRecursos([]);
       setRecurso("");
       return;
     }
 
-    const inicio = obterMinutosDoDia(
-      inicioSelecionado
-    );
+    const inicio = obterMinutosDoDia(inicioSelecionado);
+    const fim = obterMinutosDoDia(fimSelecionado);
 
-    const fim = obterMinutosDoDia(
-      fimSelecionado
-    );
-
-    /*
-     * Não consulta o backend enquanto o horário
-     * estiver inválido.
-     */
     if (fim <= inicio) {
       setListaRecursos([]);
       setRecurso("");
       return;
     }
 
-    /*
-     * A reserva precisa ter pelo menos 30 minutos.
-     */
     if (fim - inicio < 30) {
       setListaRecursos([]);
       setRecurso("");
@@ -137,14 +182,9 @@ export default function ReservaScreen({ navigation, route }) {
     }
 
     try {
-      const dataFormatada =
-        formatDate(dataSelecionada);
-
-      const horaRetirada =
-        formatTime(inicioSelecionado);
-
-      const horaDevolucao =
-        formatTime(fimSelecionado);
+      const dataFormatada = formatDate(dataSelecionada);
+      const horaRetirada = formatTime(inicioSelecionado);
+      const horaDevolucao = formatTime(fimSelecionado);
 
       const url =
         `${API_URL}/recursos/disponiveis` +
@@ -153,13 +193,7 @@ export default function ReservaScreen({ navigation, route }) {
         `&horaRetirada=${encodeURIComponent(horaRetirada)}` +
         `&horaDevolucao=${encodeURIComponent(horaDevolucao)}`;
 
-      console.log(
-        "Buscando recursos disponíveis:",
-        url
-      );
-
       const res = await fetch(url);
-
       const json = await res.json();
 
       if (!res.ok) {
@@ -177,26 +211,16 @@ export default function ReservaScreen({ navigation, route }) {
 
       setListaRecursos(recursos);
 
-      /*
-       * Se o usuário tinha escolhido um recurso
-       * que deixou de estar disponível depois da
-       * mudança de horário/data, remove a seleção.
-       */
       if (
         recurso &&
         !recursos.some(
-          (item) =>
-            String(item.idRecurso) ===
-            String(recurso)
+          (item) => String(item.idRecurso) === String(recurso)
         )
       ) {
         setRecurso("");
       }
     } catch (err) {
-      console.log(
-        "Erro ao buscar recursos disponíveis:",
-        err
-      );
+      console.log("Erro ao buscar recursos disponíveis:", err);
 
       setListaRecursos([]);
       setRecurso("");
@@ -216,10 +240,6 @@ export default function ReservaScreen({ navigation, route }) {
     setTipoAberto(false);
     setRecursoAberto(false);
 
-    /*
-     * Passa os valores atuais diretamente para a função
-     * para não depender da atualização assíncrona do estado.
-     */
     buscarRecursosDisponiveis({
       tipoSelecionado: valor,
       dataSelecionada: data,
@@ -243,14 +263,22 @@ export default function ReservaScreen({ navigation, route }) {
 
   const nomeRecurso = (id) => {
     const encontrado = listaRecursos.find(
-      (item) =>
-        String(item.idRecurso) === String(id)
+      (item) => String(item.idRecurso) === String(id)
     );
 
     return encontrado?.nome || "Selecione o recurso";
   };
 
   const validarReserva = () => {
+    if (!horariosSelecionados()) {
+      mostrarErro(
+        "Horário não selecionado",
+        "Selecione o horário de início e fim da reserva."
+      );
+
+      return false;
+    }
+
     const agora = new Date();
 
     const hoje = dataSemHora(agora);
@@ -283,11 +311,8 @@ export default function ReservaScreen({ navigation, route }) {
       0
     );
 
-    const minutosAgora =
-      obterMinutosDoDia(agora);
-
-    const minutosInicio =
-      obterMinutosDoDia(horaInicio);
+    const minutosAgora = obterMinutosDoDia(agora);
+    const minutosInicio = obterMinutosDoDia(horaInicio);
 
     if (
       dataSelecionada.getTime() === hoje.getTime() &&
@@ -311,8 +336,7 @@ export default function ReservaScreen({ navigation, route }) {
     }
 
     const duracaoMinutos =
-      (fim.getTime() - inicio.getTime()) /
-      (1000 * 60);
+      (fim.getTime() - inicio.getTime()) / (1000 * 60);
 
     if (duracaoMinutos < 30) {
       mostrarErro(
@@ -370,11 +394,6 @@ export default function ReservaScreen({ navigation, route }) {
 
       const json = await res.json();
 
-      /*
-       * Se outra pessoa acabou de reservar o recurso
-       * enquanto esta tela estava aberta, o backend
-       * retorna 409.
-       */
       if (res.status === 409) {
         setRecurso("");
 
@@ -401,23 +420,35 @@ export default function ReservaScreen({ navigation, route }) {
         return;
       }
 
-      mostrarErro(
-        "Reserva realizada",
-        `Reserva criada com sucesso!\n\nCódigo: ${json.codigoReserva}`
-      );
-
-      navigation.goBack();
+      // Monta a lista com os detalhes da reserva recém-feita
+      setReservaCriada({
+        codigo: json.codigoReserva,
+        tipo,
+        recurso: nomeRecurso(recurso),
+        data: data.toLocaleDateString("pt-BR"),
+        inicio: formatTimeCurto(horaInicio),
+        fim: formatTimeCurto(horaFim),
+        responsavel: nome,
+        matricula
+      });
     } catch (err) {
-      console.log(
-        "Erro ao salvar reserva:",
-        err
-      );
+      console.log("Erro ao salvar reserva:", err);
 
-      mostrarErro(
-        "Erro",
-        "Não foi possível salvar a reserva."
-      );
+      mostrarErro("Erro", "Não foi possível salvar a reserva.");
     }
+  };
+
+  const fecharDetalhes = () => {
+    setReservaCriada(null);
+
+    // Ajuste o nome da rota caso sua tela inicial tenha outro nome
+    navigation.navigate("Home", { usuario });
+  };
+
+  const limparSelecaoRecurso = () => {
+    setRecurso("");
+    setListaRecursos([]);
+    setRecursoAberto(false);
   };
 
   const alterarData = (event, selectedDate) => {
@@ -425,14 +456,9 @@ export default function ReservaScreen({ navigation, route }) {
 
     if (selectedDate) {
       setData(selectedDate);
+      limparSelecaoRecurso();
 
-      setRecurso("");
-      setListaRecursos([]);
-
-      /*
-       * Usa a nova data diretamente na consulta.
-       */
-      if (tipo) {
+      if (tipo && horariosSelecionados()) {
         buscarRecursosDisponiveis({
           tipoSelecionado: tipo,
           dataSelecionada: selectedDate,
@@ -443,22 +469,14 @@ export default function ReservaScreen({ navigation, route }) {
     }
   };
 
-  const alterarHoraInicio = (
-    event,
-    selectedTime
-  ) => {
+  const alterarHoraInicio = (event, selectedTime) => {
     setShowInicio(false);
 
     if (selectedTime) {
       setHoraInicio(selectedTime);
+      limparSelecaoRecurso();
 
-      setRecurso("");
-      setListaRecursos([]);
-
-      /*
-       * Usa o novo horário diretamente na consulta.
-       */
-      if (tipo) {
+      if (tipo && horaFim) {
         buscarRecursosDisponiveis({
           tipoSelecionado: tipo,
           dataSelecionada: data,
@@ -469,22 +487,16 @@ export default function ReservaScreen({ navigation, route }) {
     }
   };
 
-  const alterarHoraFim = (
-    event,
-    selectedTime
-  ) => {
+  const alterarHoraFim = (event, selectedTime) => {
     setShowFim(false);
 
     if (selectedTime) {
       setHoraFim(selectedTime);
+      limparSelecaoRecurso();
 
-      setRecurso("");
-      setListaRecursos([]);
+      if (alertarIntervaloInvalido(horaInicio, selectedTime)) return;
 
-      /*
-       * Usa o novo horário diretamente na consulta.
-       */
-      if (tipo) {
+      if (tipo && horaInicio) {
         buscarRecursosDisponiveis({
           tipoSelecionado: tipo,
           dataSelecionada: data,
@@ -496,46 +508,22 @@ export default function ReservaScreen({ navigation, route }) {
   };
 
   const dataWeb = formatDate(data);
-
-  const horaInicioWeb = `${String(
-    horaInicio.getHours()
-  ).padStart(2, "0")}:${String(
-    horaInicio.getMinutes()
-  ).padStart(2, "0")}`;
-
-  const horaFimWeb = `${String(
-    horaFim.getHours()
-  ).padStart(2, "0")}:${String(
-    horaFim.getMinutes()
-  ).padStart(2, "0")}`;
+  const horaInicioWeb = formatTimeCurto(horaInicio);
+  const horaFimWeb = formatTimeCurto(horaFim);
 
   const atualizarDataWeb = (event) => {
     const valor = event.target.value;
 
     if (!valor) return;
 
-    const [ano, mes, dia] = valor
-      .split("-")
-      .map(Number);
+    const [ano, mes, dia] = valor.split("-").map(Number);
 
-    const novaData = new Date(
-      ano,
-      mes - 1,
-      dia,
-      data.getHours(),
-      data.getMinutes()
-    );
+    const novaData = new Date(ano, mes - 1, dia);
 
     setData(novaData);
+    limparSelecaoRecurso();
 
-    setRecurso("");
-    setListaRecursos([]);
-
-    /*
-     * Atualiza os recursos imediatamente usando
-     * a nova data.
-     */
-    if (tipo) {
+    if (tipo && horariosSelecionados()) {
       buscarRecursosDisponiveis({
         tipoSelecionado: tipo,
         dataSelecionada: novaData,
@@ -545,32 +533,35 @@ export default function ReservaScreen({ navigation, route }) {
     }
   };
 
-  const atualizarHoraInicioWeb = (event) => {
-    const valor = event.target.value;
+  const criarHoraWeb = (valor) => {
+    const [hora, minuto] = valor.split(":").map(Number);
 
-    if (!valor) return;
-
-    const [hora, minuto] = valor
-      .split(":")
-      .map(Number);
-
-    const novaHora = new Date(horaInicio);
+    const novaHora = new Date();
 
     novaHora.setHours(hora);
     novaHora.setMinutes(minuto);
     novaHora.setSeconds(0);
     novaHora.setMilliseconds(0);
 
+    return novaHora;
+  };
+
+  const atualizarHoraInicioWeb = (event) => {
+    const valor = event.target.value;
+
+    // Campo limpo pelo usuário
+    if (!valor) {
+      setHoraInicio(null);
+      limparSelecaoRecurso();
+      return;
+    }
+
+    const novaHora = criarHoraWeb(valor);
+
     setHoraInicio(novaHora);
+    limparSelecaoRecurso();
 
-    setRecurso("");
-    setListaRecursos([]);
-
-    /*
-     * Atualiza os recursos imediatamente usando
-     * o novo horário.
-     */
-    if (tipo) {
+    if (tipo && horaFim) {
       buscarRecursosDisponiveis({
         tipoSelecionado: tipo,
         dataSelecionada: data,
@@ -583,29 +574,20 @@ export default function ReservaScreen({ navigation, route }) {
   const atualizarHoraFimWeb = (event) => {
     const valor = event.target.value;
 
-    if (!valor) return;
+    if (!valor) {
+      setHoraFim(null);
+      limparSelecaoRecurso();
+      return;
+    }
 
-    const [hora, minuto] = valor
-      .split(":")
-      .map(Number);
-
-    const novaHora = new Date(horaFim);
-
-    novaHora.setHours(hora);
-    novaHora.setMinutes(minuto);
-    novaHora.setSeconds(0);
-    novaHora.setMilliseconds(0);
+    const novaHora = criarHoraWeb(valor);
 
     setHoraFim(novaHora);
+    limparSelecaoRecurso();
 
-    setRecurso("");
-    setListaRecursos([]);
+    if (alertarIntervaloInvalido(horaInicio, novaHora)) return;
 
-    /*
-     * Atualiza os recursos imediatamente usando
-     * o novo horário.
-     */
-    if (tipo) {
+    if (tipo && horaInicio) {
       buscarRecursosDisponiveis({
         tipoSelecionado: tipo,
         dataSelecionada: data,
@@ -615,15 +597,36 @@ export default function ReservaScreen({ navigation, route }) {
     }
   };
 
+  
+  const detalhes = reservaCriada
+    ? [
+        [
+          { rotulo: "Recurso", valor: reservaCriada.recurso },
+          { rotulo: "Tipo", valor: reservaCriada.tipo },
+        ],
+        [
+          { rotulo: "Data", valor: reservaCriada.data },
+          { rotulo: "Código da reserva", valor: reservaCriada.codigo },
+        ],
+        [
+          { rotulo: "Início", valor: reservaCriada.inicio },
+          { rotulo: "Fim", valor: reservaCriada.fim },
+        ],
+        [
+          { rotulo: "Responsável", valor: reservaCriada.responsavel },
+        ],
+        [
+          { rotulo: "Matrícula", valor: reservaCriada.matricula },
+        ],
+      ]
+    : [];
+
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={
-          Platform.OS === "ios"
-            ? "padding"
-            : undefined
-        }
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View style={styles.header}>
           <Pressable
@@ -646,33 +649,9 @@ export default function ReservaScreen({ navigation, route }) {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.title}>
-            Fazer Reserva
-          </Text>
+          <Text style={styles.title}>Fazer Reserva</Text>
 
-          <Text style={styles.label}>
-            Nome do responsável
-          </Text>
-
-          <View style={styles.inputBloqueado}>
-            <Text style={styles.inputBloqueadoTexto}>
-              {nome}
-            </Text>
-          </View>
-
-          <Text style={styles.label}>
-            Matrícula
-          </Text>
-
-          <View style={styles.inputBloqueado}>
-            <Text style={styles.inputBloqueadoTexto}>
-              {matricula}
-            </Text>
-          </View>
-
-          <Text style={styles.label}>
-            Data de reserva
-          </Text>
+          <Text style={styles.label}>Data de reserva</Text>
 
           {Platform.OS === "web" ? (
             <View style={styles.webInputContainer}>
@@ -709,9 +688,7 @@ export default function ReservaScreen({ navigation, route }) {
 
           <View style={styles.horariosContainer}>
             <View style={styles.horarioColuna}>
-              <Text style={styles.label}>
-                Hora de retirada
-              </Text>
+              <Text style={styles.label}>Início</Text>
 
               {Platform.OS === "web" ? (
                 <View style={styles.webInputContainer}>
@@ -728,14 +705,20 @@ export default function ReservaScreen({ navigation, route }) {
                     style={styles.inputCompact}
                     onPress={() => setShowInicio(true)}
                   >
-                    <Text style={styles.inputText}>
-                      {horaInicioWeb}
+                    <Text
+                      style={
+                        horaInicio
+                          ? styles.inputText
+                          : styles.placeholderText
+                      }
+                    >
+                      {horaInicio ? horaInicioWeb : "Selecione"}
                     </Text>
                   </Pressable>
 
                   {showInicio && (
                     <DateTimePicker
-                      value={horaInicio}
+                      value={horaInicio || new Date()}
                       mode="time"
                       display="default"
                       onChange={alterarHoraInicio}
@@ -746,9 +729,7 @@ export default function ReservaScreen({ navigation, route }) {
             </View>
 
             <View style={styles.horarioColuna}>
-              <Text style={styles.label}>
-                Hora de devolução
-              </Text>
+              <Text style={styles.label}>Fim</Text>
 
               {Platform.OS === "web" ? (
                 <View style={styles.webInputContainer}>
@@ -765,14 +746,20 @@ export default function ReservaScreen({ navigation, route }) {
                     style={styles.inputCompact}
                     onPress={() => setShowFim(true)}
                   >
-                    <Text style={styles.inputText}>
-                      {horaFimWeb}
+                    <Text
+                      style={
+                        horaFim
+                          ? styles.inputText
+                          : styles.placeholderText
+                      }
+                    >
+                      {horaFim ? horaFimWeb : "Selecione"}
                     </Text>
                   </Pressable>
 
                   {showFim && (
                     <DateTimePicker
-                      value={horaFim}
+                      value={horaFim || new Date()}
                       mode="time"
                       display="default"
                       onChange={alterarHoraFim}
@@ -783,14 +770,14 @@ export default function ReservaScreen({ navigation, route }) {
             </View>
           </View>
 
-          <Text style={styles.label}>
-            Tipo de Recurso
-          </Text>
+          <Text style={styles.label}>Tipo de reserva</Text>
 
           <View style={styles.dropdownContainer}>
             <Pressable
               style={styles.dropdown}
               onPress={() => {
+                if (!exigirHorarios()) return;
+
                 setTipoAberto(!tipoAberto);
                 setRecursoAberto(false);
               }}
@@ -806,35 +793,33 @@ export default function ReservaScreen({ navigation, route }) {
 
             {tipoAberto && (
               <View style={styles.dropdownList}>
-                {[
-                  "Sala",
-                  "Laboratório",
-                  "Equipamento"
-                ].map((item) => (
-                  <Pressable
-                    key={item}
-                    style={styles.dropdownItem}
-                    onPress={() =>
-                      selecionarTipo(item)
-                    }
-                  >
-                    <Text style={styles.dropdownItemText}>
-                      {item}
-                    </Text>
-                  </Pressable>
-                ))}
+                {["Sala", "Laboratório", "Equipamento"].map(
+                  (item) => (
+                    <Pressable
+                      key={item}
+                      style={styles.dropdownItem}
+                      onPress={() => selecionarTipo(item)}
+                    >
+                      <Text style={styles.dropdownItemText}>
+                        {item}
+                      </Text>
+                    </Pressable>
+                  )
+                )}
               </View>
             )}
           </View>
 
-          <Text style={styles.label}>
-            Recurso
-          </Text>
+          <Text style={styles.label}>Recurso</Text>
 
           <View style={styles.dropdownContainer}>
             <Pressable
               style={styles.dropdown}
               onPress={() => {
+                if (!exigirHorarios()) return;
+
+                if (alertarIntervaloInvalido(horaInicio, horaFim)) return;
+
                 if (listaRecursos.length > 0) {
                   setRecursoAberto(!recursoAberto);
                   setTipoAberto(false);
@@ -860,16 +845,10 @@ export default function ReservaScreen({ navigation, route }) {
                       key={item.idRecurso}
                       style={styles.dropdownItem}
                       onPress={() =>
-                        selecionarRecurso(
-                          item.idRecurso
-                        )
+                        selecionarRecurso(item.idRecurso)
                       }
                     >
-                      <Text
-                        style={
-                          styles.dropdownItemText
-                        }
-                      >
+                      <Text style={styles.dropdownItemText}>
                         {item.nome}
                       </Text>
                     </Pressable>
@@ -885,16 +864,52 @@ export default function ReservaScreen({ navigation, route }) {
             )}
           </View>
 
-          <Pressable
-            style={styles.button}
-            onPress={salvarReserva}
-          >
-            <Text style={styles.buttonText}>
-              Reservar
-            </Text>
+          <Pressable style={styles.button} onPress={salvarReserva}>
+            <Text style={styles.buttonText}>Reservar</Text>
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={!!reservaCriada}
+        transparent
+        animationType="fade"
+        onRequestClose={fecharDetalhes}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>
+              Reserva realizada!
+            </Text>
+
+            <ScrollView>
+              
+  {detalhes.map((linha, index) => (
+    <View key={index} style={styles.detalheLinha}>
+      {linha.map((item) => (
+        <View key={item.rotulo} style={styles.detalheColuna}>
+          <Text style={styles.detalheRotulo}>
+            {item.rotulo}
+          </Text>
+          <Text style={styles.detalheValor}>
+            {item.valor}
+          </Text>
+        </View>
+      ))}
+    </View>
+  ))}
+
+            </ScrollView>
+
+            <Pressable
+              style={styles.button}
+              onPress={fecharDetalhes}
+            >
+              <Text style={styles.buttonText}>Fechar</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -965,22 +980,6 @@ const styles = StyleSheet.create({
     color: "#333"
   },
 
-  inputBloqueado: {
-    backgroundColor: "#F1F3F2",
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 12,
-    minHeight: 50,
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#D8DDD9"
-  },
-
-  inputBloqueadoTexto: {
-    fontSize: 16,
-    color: "#444"
-  },
-
   inputCompact: {
     backgroundColor: "#FFF",
     padding: 13,
@@ -992,6 +991,11 @@ const styles = StyleSheet.create({
 
   inputText: {
     color: "#333",
+    fontSize: 16
+  },
+
+  placeholderText: {
+    color: "#999",
     fontSize: 16
   },
 
@@ -1104,5 +1108,50 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontWeight: "bold",
     fontSize: 16
-  }
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    padding: 24
+  },
+
+  modalCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 16,
+    padding: 24,
+    maxHeight: "85%"
+  },
+
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#007A33",
+    marginBottom: 16,
+    textAlign: "center"
+  },
+  
+  detalheLinha: {
+  flexDirection: "row",
+  gap: 16,
+  paddingVertical: 10,
+},
+
+detalheColuna: {
+  flex: 1,
+  minWidth: 0,
+},
+
+detalheRotulo: {
+  fontSize: 13,
+  color: "#777",
+  marginBottom: 2,
+},
+
+detalheValor: {
+  fontSize: 16,
+  fontWeight: "bold",
+  color: "#333",
+},
 });

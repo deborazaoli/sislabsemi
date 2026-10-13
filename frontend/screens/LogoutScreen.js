@@ -3,36 +3,45 @@ import {
   View,
   Text,
   Pressable,
-  StyleSheet
+  StyleSheet,
+  Alert
 } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import { signOut } from "firebase/auth";
-import { auth } from "../firebase";
+import { SESSAO_KEY } from "./LoginUsuarioScreen";
 
 export default function LogoutScreen({ navigation }) {
 
   const sair = async () => {
-    await signOut(auth);
+    try {
+      
+      await AsyncStorage.removeItem(SESSAO_KEY);
+      navigation.reset({
+        index: 0,
+        routes: [
+          {
+            name: "LoginUsuario"
+          }
+        ]
+      });
 
-    navigation.reset({
-      index: 0,
-      routes: [
-        {
-          name: "LoginUsuario"
-        }
-      ]
-    });
+    } catch (error) {
+      console.log("Erro ao fazer logout:", error);
+
+      Alert.alert(
+        "Erro",
+        "Não foi possível encerrar a sessão. Tente novamente."
+      );
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-
       <View style={styles.container}>
 
         <View style={styles.header}>
-
           <Pressable
             onPress={() => navigation.goBack()}
             style={styles.voltar}
@@ -45,11 +54,9 @@ export default function LogoutScreen({ navigation }) {
           </Text>
 
           <View style={styles.espaco} />
-
         </View>
 
         <View style={styles.conteudo}>
-
           <Text style={styles.title}>
             Deseja sair?
           </Text>
@@ -62,11 +69,9 @@ export default function LogoutScreen({ navigation }) {
               Fazer Logout
             </Text>
           </Pressable>
-
         </View>
 
       </View>
-
     </SafeAreaView>
   );
 }

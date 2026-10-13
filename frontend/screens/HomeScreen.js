@@ -1,4 +1,8 @@
-import React from "react";
+import React, {
+  useCallback,
+  useState
+} from "react";
+
 import {
   View,
   Text,
@@ -7,7 +11,12 @@ import {
   Image,
   useWindowDimensions,
   ScrollView,
+  ActivityIndicator
 } from "react-native";
+
+import { useFocusEffect } from "@react-navigation/native";
+
+import API_URL from "../services/api";
 
 export default function HomeScreen({ navigation, route }) {
   const { width } = useWindowDimensions();
@@ -20,11 +29,9 @@ export default function HomeScreen({ navigation, route }) {
     usuario.nomeCompleto ||
     "Usuário";
 
-  // Reservas do usuário, caso sejam enviadas junto com o login
-  const reservas =
-    usuario.reservas ||
-    usuario.minhasReservas ||
-    [];
+  const [reservas, setReservas] = useState([]);
+  const [carregandoReservas, setCarregandoReservas] =
+    useState(true);
 
   const isSmallScreen = width < 600;
   const isVerySmallScreen = width < 380;
@@ -35,6 +42,161 @@ export default function HomeScreen({ navigation, route }) {
 
   const cardHeight = isSmallScreen ? 190 : 220;
 
+  // =====================================================
+  // BUSCAR RESERVAS DO USUÁRIO
+  // =====================================================
+
+  const buscarReservas = async () => {
+    if (!usuario?.idUsuario) {
+      setReservas([]);
+      setCarregandoReservas(false);
+      return;
+    }
+
+    try {
+      setCarregandoReservas(true);
+
+      const response = await fetch(
+        `${API_URL}/reservas/usuario/${usuario.idUsuario}`
+      );
+
+      const json = await response.json();
+
+      if (!response.ok) {
+        console.log(
+          "Erro ao buscar reservas:",
+          json
+        );
+
+        setReservas([]);
+        return;
+      }
+
+      if (Array.isArray(json)) {
+        setReservas(json);
+      } else {
+        setReservas([]);
+      }
+    } catch (error) {
+      console.log(
+        "Erro ao buscar reservas do usuário:",
+        error
+      );
+
+      setReservas([]);
+    } finally {
+      setCarregandoReservas(false);
+    }
+  };
+
+  // =====================================================
+  // ATUALIZA AS RESERVAS SEMPRE QUE A HOME ABRIR
+  // =====================================================
+
+  useFocusEffect(
+    useCallback(() => {
+      buscarReservas();
+    }, [usuario?.idUsuario])
+  );
+
+  // =====================================================
+  // DATA DE HOJE
+  // =====================================================
+
+  const obterDataHoje = () => {
+    const agora = new Date();
+
+    const ano = agora.getFullYear();
+
+    const mes = String(
+      agora.getMonth() + 1
+    ).padStart(2, "0");
+
+    const dia = String(
+      agora.getDate()
+    ).padStart(2, "0");
+
+    return `${ano}-${mes}-${dia}`;
+  };
+
+  const dataHoje = obterDataHoje();
+
+  // =====================================================
+  // RESERVAS ATIVAS DE HOJE
+  // =====================================================
+
+  const reservasHoje = reservas.filter(
+    (reserva) =>
+      reserva.statusReserva === "ativa" &&
+      String(reserva.reservaData).slice(0, 10) ===
+        dataHoje
+  );
+
+  const quantidadeReservasHoje =
+    reservasHoje.length;
+
+  // =====================================================
+  // RESERVAS RECENTES
+  // =====================================================
+
+  const reservasRecentes = reservas
+    .filter(
+      (reserva) =>
+        reserva.statusReserva === "ativa"
+    )
+    .slice(0, 3);
+
+  // =====================================================
+  // FORMATAR DATA
+  // =====================================================
+
+  const formatarData = (data) => {
+    if (!data) {
+      return "Data não informada";
+    }
+
+    const valor = String(data).slice(0, 10);
+
+    const partes = valor.split("-");
+
+    if (partes.length !== 3) {
+      return valor;
+    }
+
+    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+  };
+
+  // =====================================================
+  // FORMATAR HORÁRIO
+  // =====================================================
+
+  const formatarHorario = (
+    horaRetirada,
+    horaDevolucao
+  ) => {
+    if (!horaRetirada) {
+      return "Horário não informado";
+    }
+
+    const inicio = String(
+      horaRetirada
+    ).slice(0, 5);
+
+    if (!horaDevolucao) {
+      return inicio;
+    }
+
+    const fim = String(
+      horaDevolucao
+    ).slice(0, 5);
+
+    return `${inicio} - ${fim}`;
+  };
+
+  // =====================================================
+  // RENDER
+  // =====================================================
+
   return (
     <View style={styles.container}>
 
@@ -43,7 +205,8 @@ export default function HomeScreen({ navigation, route }) {
           styles.header,
           {
             height: isSmallScreen ? 80 : 90,
-            paddingHorizontal: isSmallScreen ? 20 : 30,
+            paddingHorizontal:
+              isSmallScreen ? 20 : 30,
           },
         ]}
       >
@@ -52,7 +215,8 @@ export default function HomeScreen({ navigation, route }) {
           style={[
             styles.logo,
             {
-              fontSize: isSmallScreen ? 28 : 32,
+              fontSize:
+                isSmallScreen ? 28 : 32,
             },
           ]}
         >
@@ -63,12 +227,17 @@ export default function HomeScreen({ navigation, route }) {
           style={[
             styles.userButton,
             {
-              width: isSmallScreen ? 48 : 54,
-              height: isSmallScreen ? 48 : 54,
-              borderRadius: isSmallScreen ? 24 : 27,
+              width:
+                isSmallScreen ? 48 : 54,
+              height:
+                isSmallScreen ? 48 : 54,
+              borderRadius:
+                isSmallScreen ? 24 : 27,
             },
           ]}
-          onPress={() => navigation.navigate("Logout")}
+          onPress={() =>
+            navigation.navigate("Logout")
+          }
         >
           <Image
             source={require("../assets/user.png")}
@@ -82,8 +251,10 @@ export default function HomeScreen({ navigation, route }) {
         contentContainerStyle={[
           styles.content,
           {
-            paddingHorizontal: isSmallScreen ? 20 : 30,
-            paddingTop: isSmallScreen ? 25 : 35,
+            paddingHorizontal:
+              isSmallScreen ? 20 : 30,
+            paddingTop:
+              isSmallScreen ? 25 : 35,
             paddingBottom: 40,
           },
         ]}
@@ -94,7 +265,8 @@ export default function HomeScreen({ navigation, route }) {
           style={[
             styles.welcome,
             {
-              fontSize: isSmallScreen ? 20 : 24,
+              fontSize:
+                isSmallScreen ? 20 : 24,
             },
           ]}
         >
@@ -153,7 +325,9 @@ export default function HomeScreen({ navigation, route }) {
                 height: cardHeight,
               },
             ]}
-            onPress={() => navigation.navigate("Calendario")}
+            onPress={() =>
+              navigation.navigate("Calendario")
+            }
           >
 
             <View style={styles.iconContainer}>
@@ -222,9 +396,12 @@ export default function HomeScreen({ navigation, route }) {
               },
             ]}
             onPress={() =>
-              navigation.navigate("RelatarProblema", {
-                usuario: usuario,
-              })
+              navigation.navigate(
+                "RelatarProblema",
+                {
+                  usuario: usuario,
+                }
+              )
             }
           >
 
@@ -250,6 +427,39 @@ export default function HomeScreen({ navigation, route }) {
         </View>
 
         {/* ==================================================
+            RESERVAS DE HOJE
+        ================================================== */}
+
+        <View style={styles.todayBox}>
+
+          <View>
+            <Text style={styles.todayTitle}>
+              Reservas de hoje
+            </Text>
+
+            <Text style={styles.todaySubtitle}>
+              Reservas ativas para hoje
+            </Text>
+          </View>
+
+          <View style={styles.todayNumberContainer}>
+
+            {carregandoReservas ? (
+              <ActivityIndicator
+                size="small"
+                color="#007A33"
+              />
+            ) : (
+              <Text style={styles.todayNumber}>
+                {quantidadeReservasHoje}
+              </Text>
+            )}
+
+          </View>
+
+        </View>
+
+        {/* ==================================================
             RESERVAS RECENTES
         ================================================== */}
 
@@ -257,7 +467,8 @@ export default function HomeScreen({ navigation, route }) {
           style={[
             styles.recentTitle,
             {
-              fontSize: isSmallScreen ? 20 : 24,
+              fontSize:
+                isSmallScreen ? 20 : 24,
             },
           ]}
         >
@@ -266,45 +477,75 @@ export default function HomeScreen({ navigation, route }) {
 
         <View style={styles.recentReservations}>
 
-          {reservas.length === 0 ? (
+          {carregandoReservas ? (
+
+            <View style={styles.loadingContainer}>
+
+              <ActivityIndicator
+                size="small"
+                color="#007A33"
+              />
+
+              <Text style={styles.loadingText}>
+                Carregando reservas...
+              </Text>
+
+            </View>
+
+          ) : reservasRecentes.length === 0 ? (
 
             <Text style={styles.emptyText}>
-              Você ainda não possui reservas recentes.
+              Você ainda não possui reservas
+              recentes.
             </Text>
 
           ) : (
 
-            reservas.slice(0, 3).map((reserva, index) => (
+            reservasRecentes.map(
+              (reserva, index) => (
 
-              <View
-                key={reserva.idReserva || reserva.codigoReserva || index}
-                style={styles.reservaItem}
-              >
+                <View
+                  key={
+                    reserva.idReserva ||
+                    reserva.codigoReserva ||
+                    index
+                  }
+                  style={[
+                    styles.reservaItem,
+                    index ===
+                      reservasRecentes.length - 1 &&
+                      styles.ultimoItem,
+                  ]}
+                >
 
-                <Text style={styles.recentText}>
-                  {reserva.nomeRecurso ||
-                    reserva.recurso ||
-                    reserva.nomeSala ||
-                    "Recurso reservado"}
-                </Text>
+                  <Text style={styles.recentText}>
 
-                <Text style={styles.reservaDetails}>
+                    {reserva.nomeRecurso ||
+                      "Recurso reservado"}
 
-                  {reserva.data ||
-                    reserva.dataReserva ||
-                    "Data não informada"}
+                  </Text>
 
-                  {" • "}
+                  <Text
+                    style={styles.reservaDetails}
+                  >
 
-                  {reserva.horario ||
-                    reserva.hora ||
-                    "Horário não informado"}
+                    {formatarData(
+                      reserva.reservaData
+                    )}
 
-                </Text>
+                    {" • "}
 
-              </View>
+                    {formatarHorario(
+                      reserva.horaRetirada,
+                      reserva.horaDevolucao
+                    )}
 
-            ))
+                  </Text>
+
+                </View>
+
+              )
+            )
 
           )}
 
@@ -452,6 +693,62 @@ const styles = StyleSheet.create({
   },
 
   // ====================================================
+  // RESERVAS DE HOJE
+  // ====================================================
+
+  todayBox: {
+    backgroundColor: "#FFFFFF",
+
+    borderRadius: 15,
+
+    padding: 18,
+
+    marginTop: 30,
+
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+
+    borderWidth: 1.5,
+    borderColor: "#a6e4cf",
+
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+
+  todayTitle: {
+    color: "#006633",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+
+  todaySubtitle: {
+    color: "#666666",
+    fontSize: 13,
+  },
+
+  todayNumberContainer: {
+    width: 55,
+    height: 55,
+
+    borderRadius: 28,
+
+    backgroundColor: "#d4fee9",
+
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  todayNumber: {
+    color: "#007A33",
+    fontSize: 24,
+    fontWeight: "bold",
+  },
+
+  // ====================================================
   // RESERVAS RECENTES
   // ====================================================
 
@@ -484,6 +781,12 @@ const styles = StyleSheet.create({
     borderBottomColor: "#e5e5e5",
   },
 
+  ultimoItem: {
+    borderBottomWidth: 0,
+    marginBottom: 0,
+    paddingBottom: 0,
+  },
+
   recentText: {
     color: "#333333",
     fontSize: 15,
@@ -494,6 +797,18 @@ const styles = StyleSheet.create({
   reservaDetails: {
     color: "#666666",
     fontSize: 13,
+  },
+
+  loadingContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+  },
+
+  loadingText: {
+    color: "#777777",
+    fontSize: 14,
+    marginTop: 8,
   },
 
   emptyText: {

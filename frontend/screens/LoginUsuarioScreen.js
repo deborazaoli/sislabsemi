@@ -10,7 +10,8 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Image
+  Image,
+  ActivityIndicator
 } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,6 +21,10 @@ import API_URL from "../services/api";
 
 
 const EMAILS_SALVOS_KEY = "@sislab:emails_salvos";
+
+// Chave onde fica guardado o usuário quando "Manter conectado" está marcado.
+// Importe esta constante na tela/botão de sair para remover a sessão.
+export const SESSAO_KEY = "@sislab:usuario_logado";
 
 
 export default function LoginUsuarioScreen({ navigation }) {
@@ -33,13 +38,57 @@ export default function LoginUsuarioScreen({ navigation }) {
 
   const [carregando, setCarregando] = useState(false);
 
+  const [manterConectado, setManterConectado] = useState(false);
 
-  // Carrega os emails salvos no dispositivo
+  // Enquanto verifica se já existe sessão salva, não mostra o formulário
+  const [verificandoSessao, setVerificandoSessao] = useState(true);
+
+
   useEffect(() => {
     carregarEmailsSalvos();
+    verificarSessao();
   }, []);
 
 
+  // Se o usuário escolheu permanecer conectado, entra direto na Home
+  const verificarSessao = async () => {
+
+    try {
+
+      const dados = await AsyncStorage.getItem(
+        SESSAO_KEY
+      );
+
+      if (dados) {
+
+        const usuario = JSON.parse(dados);
+
+        if (usuario) {
+
+          navigation.replace("Home", {
+            usuario
+          });
+
+          return;
+        }
+
+      }
+
+    } catch (error) {
+
+      console.log(
+        "Erro ao verificar sessão:",
+        error
+      );
+
+    }
+
+    setVerificandoSessao(false);
+
+  };
+
+
+  // Carrega os emails salvos no dispositivo
   const carregarEmailsSalvos = async () => {
 
     try {
@@ -109,6 +158,38 @@ export default function LoginUsuarioScreen({ navigation }) {
 
       console.log(
         "Erro ao salvar email:",
+        error
+      );
+
+    }
+
+  };
+
+
+  // Guarda (ou apaga) a sessão conforme a caixinha
+  const salvarSessao = async (usuario) => {
+
+    try {
+
+      if (manterConectado) {
+
+        await AsyncStorage.setItem(
+          SESSAO_KEY,
+          JSON.stringify(usuario)
+        );
+
+      } else {
+
+        await AsyncStorage.removeItem(
+          SESSAO_KEY
+        );
+
+      }
+
+    } catch (error) {
+
+      console.log(
+        "Erro ao salvar sessão:",
         error
       );
 
@@ -221,6 +302,10 @@ export default function LoginUsuarioScreen({ navigation }) {
       await salvarEmail(email);
 
 
+      // Salva a sessão se "Manter conectado" estiver marcado
+      await salvarSessao(data.usuario);
+
+
       navigation.replace("Home", {
         usuario: data.usuario,
       });
@@ -245,6 +330,26 @@ export default function LoginUsuarioScreen({ navigation }) {
     }
 
   };
+
+
+  if (verificandoSessao) {
+
+    return (
+
+      <SafeAreaView
+        style={[styles.safeArea, styles.centralizado]}
+      >
+
+        <ActivityIndicator
+          size="large"
+          color="#007A33"
+        />
+
+      </SafeAreaView>
+
+    );
+
+  }
 
 
   return (
@@ -394,6 +499,37 @@ export default function LoginUsuarioScreen({ navigation }) {
             />
 
 
+            {/* MANTER CONECTADO */}
+
+            <Pressable
+              style={styles.checkboxRow}
+              onPress={() =>
+                setManterConectado(!manterConectado)
+              }
+            >
+
+              <View
+                style={[
+                  styles.checkbox,
+                  manterConectado && styles.checkboxMarcado
+                ]}
+              >
+
+                {manterConectado && (
+                  <Text style={styles.checkboxCheck}>
+                    ✓
+                  </Text>
+                )}
+
+              </View>
+
+              <Text style={styles.checkboxLabel}>
+                Manter conectado
+              </Text>
+
+            </Pressable>
+
+
             {/* ENTRAR */}
 
             <Pressable
@@ -484,6 +620,12 @@ const styles = StyleSheet.create({
   },
 
 
+  centralizado: {
+    justifyContent: "center",
+    alignItems: "center"
+  },
+
+
   container: {
     flex: 1,
     backgroundColor: "#ccfce4"
@@ -553,6 +695,48 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 18,
     fontSize: 16
+  },
+
+
+  /* MANTER CONECTADO */
+
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 18,
+    alignSelf: "flex-start"
+  },
+
+
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: "#007A33",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10
+  },
+
+
+  checkboxMarcado: {
+    backgroundColor: "#007A33"
+  },
+
+
+  checkboxCheck: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "bold",
+    lineHeight: 18
+  },
+
+
+  checkboxLabel: {
+    fontSize: 15,
+    color: "#222"
   },
 
 
