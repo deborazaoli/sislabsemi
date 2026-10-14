@@ -50,22 +50,6 @@ export default function CadastroUsuarioScreen({ navigation }) {
       return;
     }
 
-
-    /*
-      FORMATO DA MATRÍCULA:
-
-      AAAA + SEMESTRE + CURSO + CAMPUS + NÚMEROS
-
-      Exemplo:
-      20241TDS-JG0165
-
-      2024 = ano de entrada
-      1    = semestre
-      TDS  = curso
-      JG   = campus
-      0165 = número do aluno
-    */
-
     const formatoMatricula =
       /^\d{5}[A-Z]{3}-[A-Z]{2}\d{4}$/;
 
@@ -271,7 +255,7 @@ export default function CadastroUsuarioScreen({ navigation }) {
 
             <TextInput
               style={styles.input}
-              placeholder="Ex.: 20241TDS-JG0165"
+              placeholder="Ex.: 20241TDS-JG000"
               value={matricula}
               onChangeText={(texto) =>
                 setMatricula(
@@ -282,11 +266,6 @@ export default function CadastroUsuarioScreen({ navigation }) {
               autoCorrect={false}
               maxLength={15}
             />
-
-
-            <Text style={styles.description}>
-              Formato: ano + semestre + curso + campus + 4 números.
-            </Text>
 
 
             {/* EMAIL */}

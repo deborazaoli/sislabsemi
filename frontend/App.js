@@ -26,7 +26,7 @@ export default function App() {
   return (
     <>
       {/* Oculta horário, Wi-Fi, bateria e demais informações do celular */}
-      <StatusBar hidden />
+      {/*<StatusBar hidden />*/}
 
       <NavigationContainer>
         <Stack.Navigator

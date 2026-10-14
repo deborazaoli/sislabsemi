@@ -1,20 +1,6 @@
 import React, { useState } from "react";
-
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  Image,
-  Platform,
-  ScrollView,
-  KeyboardAvoidingView,
-  Alert,
-  Modal
-} from "react-native";
-
+import { View,Text, Pressable, StyleSheet, Image, Platform, ScrollView, KeyboardAvoidingView, Alert, Modal } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
 import DateTimePicker from "@react-native-community/datetimepicker";
 
 import API_URL from "../services/api";
@@ -441,7 +427,6 @@ export default function ReservaScreen({ navigation, route }) {
   const fecharDetalhes = () => {
     setReservaCriada(null);
 
-    // Ajuste o nome da rota caso sua tela inicial tenha outro nome
     navigation.navigate("Home", { usuario });
   };
 
@@ -549,7 +534,6 @@ export default function ReservaScreen({ navigation, route }) {
   const atualizarHoraInicioWeb = (event) => {
     const valor = event.target.value;
 
-    // Campo limpo pelo usuário
     if (!valor) {
       setHoraInicio(null);
       limparSelecaoRecurso();
@@ -898,7 +882,6 @@ export default function ReservaScreen({ navigation, route }) {
       ))}
     </View>
   ))}
-
             </ScrollView>
 
             <Pressable

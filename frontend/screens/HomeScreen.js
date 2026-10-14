@@ -1,7 +1,4 @@
-import React, {
-  useCallback,
-  useState
-} from "react";
+import React, { useCallback, useState } from "react";
 
 import {
   View,
@@ -14,6 +11,7 @@ import {
   ActivityIndicator
 } from "react-native";
 
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 
 import API_URL from "../services/api";
@@ -42,10 +40,7 @@ export default function HomeScreen({ navigation, route }) {
 
   const cardHeight = isSmallScreen ? 190 : 220;
 
-  // =====================================================
   // BUSCAR RESERVAS DO USUÁRIO
-  // =====================================================
-
   const buscarReservas = async () => {
     if (!usuario?.idUsuario) {
       setReservas([]);
@@ -89,19 +84,12 @@ export default function HomeScreen({ navigation, route }) {
     }
   };
 
-  // =====================================================
-  // ATUALIZA AS RESERVAS SEMPRE QUE A HOME ABRIR
-  // =====================================================
 
   useFocusEffect(
     useCallback(() => {
       buscarReservas();
     }, [usuario?.idUsuario])
   );
-
-  // =====================================================
-  // DATA DE HOJE
-  // =====================================================
 
   const obterDataHoje = () => {
     const agora = new Date();
@@ -121,10 +109,6 @@ export default function HomeScreen({ navigation, route }) {
 
   const dataHoje = obterDataHoje();
 
-  // =====================================================
-  // RESERVAS ATIVAS DE HOJE
-  // =====================================================
-
   const reservasHoje = reservas.filter(
     (reserva) =>
       reserva.statusReserva === "ativa" &&
@@ -135,20 +119,12 @@ export default function HomeScreen({ navigation, route }) {
   const quantidadeReservasHoje =
     reservasHoje.length;
 
-  // =====================================================
-  // RESERVAS RECENTES
-  // =====================================================
-
   const reservasRecentes = reservas
     .filter(
       (reserva) =>
         reserva.statusReserva === "ativa"
     )
     .slice(0, 3);
-
-  // =====================================================
-  // FORMATAR DATA
-  // =====================================================
 
   const formatarData = (data) => {
     if (!data) {
@@ -166,10 +142,7 @@ export default function HomeScreen({ navigation, route }) {
     return `${partes[2]}/${partes[1]}/${partes[0]}`;
   };
 
-  // =====================================================
   // FORMATAR HORÁRIO
-  // =====================================================
-
   const formatarHorario = (
     horaRetirada,
     horaDevolucao
@@ -193,12 +166,11 @@ export default function HomeScreen({ navigation, route }) {
     return `${inicio} - ${fim}`;
   };
 
-  // =====================================================
   // RENDER
-  // =====================================================
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <View style={styles.container}>
 
       <View
         style={[
@@ -246,6 +218,7 @@ export default function HomeScreen({ navigation, route }) {
         </Pressable>
 
       </View>
+      
 
       <ScrollView
         contentContainerStyle={[
@@ -554,34 +527,29 @@ export default function HomeScreen({ navigation, route }) {
       </ScrollView>
 
     </View>
+    </SafeAreaView>
   );
 }
 
-// ======================================================
-// ESTILOS
-// ======================================================
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#FFFFFF"
+  },
 
   container: {
     flex: 1,
     backgroundColor: "#d4fee9",
   },
 
-  // ====================================================
-  // HEADER BRANCO
-  // ====================================================
-
   header: {
-    backgroundColor: "#FFFFFF",
+    height: 75,
+    backgroundColor: "#FFF",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 5,
-    elevation: 3,
+    paddingHorizontal: 20
   },
 
   logo: {
@@ -610,10 +578,6 @@ const styles = StyleSheet.create({
     height: "60%",
   },
 
-  // ====================================================
-  // CONTEÚDO
-  // ====================================================
-
   content: {
     flexGrow: 1,
   },
@@ -630,10 +594,7 @@ const styles = StyleSheet.create({
     marginBottom: 25,
   },
 
-  // ====================================================
   // CARDS
-  // ====================================================
-
   cardsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -692,10 +653,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 
-  // ====================================================
   // RESERVAS DE HOJE
-  // ====================================================
-
   todayBox: {
     backgroundColor: "#FFFFFF",
 
@@ -747,10 +705,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
   },
-
-  // ====================================================
-  // RESERVAS RECENTES
-  // ====================================================
 
   recentTitle: {
     fontWeight: "bold",
