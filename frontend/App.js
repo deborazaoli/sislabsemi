@@ -6,6 +6,7 @@ import HomeScreen from "./screens/HomeScreen";
 import ReservaScreen from "./screens/ReservaScreen";
 import CalendarioScreen from "./screens/CalendarioScreen";
 import MinhasReservasScreen from "./screens/MinhasReservasScreen";
+import RelatarProblemaScreen from "./screens/RelatarProblemaScreen";
 
 import LoginUsuarioScreen from "./screens/LoginUsuarioScreen";
 import CadastroUsuarioScreen from "./screens/CadastroUsuarioScreen";
@@ -18,7 +19,7 @@ import SalasScreen from "./screens/SalasScreen";
 import EquipamentosScreen from "./screens/EquipamentosScreen";
 import RecursoFormScreen from "./screens/RecursoFormScreen";
 import RelatoriosScreen from "./screens/RelatoriosScreen";
-import LogoutScreen from "./screens/LogoutScreen";
+import PerfilScreen from "./screens/PerfilScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -65,10 +66,14 @@ export default function App() {
             component={CalendarioScreen}
           />
 
-          {/* MINHAS RESERVAS */}
           <Stack.Screen
             name="MinhasReservas"
             component={MinhasReservasScreen}
+          />
+
+          <Stack.Screen
+            name="RelatarProblema"
+            component={RelatarProblemaScreen}
           />
 
           {/* LOGIN ADMINISTRATIVO */}
@@ -109,10 +114,9 @@ export default function App() {
             component={RelatoriosScreen}
           />
 
-          {/* LOGOUT */}
           <Stack.Screen
-            name="Logout"
-            component={LogoutScreen}
+            name="Perfil"
+            component={PerfilScreen}
           />
 
         </Stack.Navigator>

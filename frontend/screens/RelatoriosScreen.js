@@ -7,10 +7,12 @@ import {
   Pressable,
   Image
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import API_URL from "../services/api";
 
-export default function RelatoriosScreen({ navigation }) {
+export default function RelatoriosScreen({ navigation, route }) {
+  const usuario = route?.params?.usuario || {};
   const [relatorio, setRelatorio] = useState([]);
 
   const buscar = async () => {
@@ -26,60 +28,63 @@ export default function RelatoriosScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <View style={styles.container}>
 
-      <View style={styles.header}>
+        {/* HEADER PADRONIZADO */}
+        <View style={styles.header}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Image
+              source={require("../assets/seta.png")}
+              style={styles.backIcon}
+            />
+          </Pressable>
 
-        <Pressable onPress={() => navigation.goBack()}>
-          <Image
-            source={require("../assets/seta.png")}
-            style={styles.icon}
-          />
-        </Pressable>
+          <Text style={styles.tituloHeader}>Relatórios</Text>
 
-        <Text style={styles.tituloHeader}>
-          SISLAB
-        </Text>
+          <View style={styles.headerSpace} />
+        </View>
 
-        <View style={{ width: 28 }} />
+        {/* CONTEÚDO */}
+        <View style={styles.content}>
+          <Pressable style={styles.btn} onPress={buscar}>
+            <Text style={styles.btnText}>
+              Gerar relatório
+            </Text>
+          </Pressable>
+
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {relatorio.map((r) => (
+              <View key={r.idReserva} style={styles.card}>
+                <Text style={styles.nome}>
+                  {r.responsavelNome}
+                </Text>
+
+                <Text style={styles.texto}>
+                  Data: {r.reservaData}
+                </Text>
+
+                <Text style={styles.texto}>
+                  Status: {r.statusReserva}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
 
       </View>
-
-      {/* CONTEÚDO */}
-      <View style={styles.content}>
-
-        <Pressable style={styles.btn} onPress={buscar}>
-          <Text style={styles.btnText}>
-            Gerar relatório
-          </Text>
-        </Pressable>
-
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {relatorio.map((r) => (
-            <View key={r.idReserva} style={styles.card}>
-
-              <Text style={styles.nome}>
-                {r.responsavelNome}
-              </Text>
-
-              <Text style={styles.texto}>
-                Data: {r.reservaData}
-              </Text>
-
-              <Text style={styles.texto}>
-                Status: {r.statusReserva}
-              </Text>
-
-            </View>
-          ))}
-        </ScrollView>
-
-      </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#FFFFFF"
+  },
 
   container: {
     flex: 1,
@@ -87,21 +92,40 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    height: 75,
-    backgroundColor: "#FFFFFF",
+    height: 60,
+    backgroundColor: "#FFF",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 30
+    paddingHorizontal: 15,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
+  },
+
+  backButton: {
+    width: 38,
+    height: 38,
+    justifyContent: "center",
+    alignItems: "flex-start",
+    zIndex: 2,
+  },
+
+  headerSpace: {
+    width: 38
   },
 
   tituloHeader: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#007A33"
+    fontSize: 22,
+    fontWeight: "900",
+    letterSpacing: 1,
+    color: "#007A33",
+    textAlign: "center"
   },
 
-  icon: {
+  backIcon: {
     width: 28,
     height: 28,
     resizeMode: "contain"
@@ -123,24 +147,31 @@ const styles = StyleSheet.create({
 
   btnText: {
     color: "#FFF",
-    fontWeight: "bold"
+    fontWeight: "bold",
+    fontSize: 16
   },
 
   card: {
     backgroundColor: "#FFF",
     padding: 12,
     borderRadius: 10,
-    marginBottom: 10
+    marginBottom: 10,
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
   },
 
   nome: {
     fontSize: 16,
     fontWeight: "bold",
-    marginBottom: 5
+    marginBottom: 5,
+    color: "#007A33"
   },
 
   texto: {
-    fontSize: 14
+    fontSize: 14,
+    color: "#333"
   }
-
 });

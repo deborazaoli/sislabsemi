@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View,Text, Pressable, StyleSheet, Image, Platform, ScrollView, KeyboardAvoidingView, Alert, Modal } from "react-native";
+import { View, Text, Pressable, StyleSheet, Image, Platform, ScrollView, KeyboardAvoidingView, Alert, Modal } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
@@ -581,7 +581,6 @@ export default function ReservaScreen({ navigation, route }) {
     }
   };
 
-  
   const detalhes = reservaCriada
     ? [
         [
@@ -605,9 +604,8 @@ export default function ReservaScreen({ navigation, route }) {
       ]
     : [];
 
-
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -623,7 +621,7 @@ export default function ReservaScreen({ navigation, route }) {
             />
           </Pressable>
 
-          <Text style={styles.logo}>SISLAB</Text>
+          <Text style={styles.logo}>Fazer Reserva</Text>
 
           <View style={styles.headerSpace} />
         </View>
@@ -633,8 +631,6 @@ export default function ReservaScreen({ navigation, route }) {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.title}>Fazer Reserva</Text>
-
           <Text style={styles.label}>Data de reserva</Text>
 
           {Platform.OS === "web" ? (
@@ -867,21 +863,20 @@ export default function ReservaScreen({ navigation, route }) {
             </Text>
 
             <ScrollView>
-              
-  {detalhes.map((linha, index) => (
-    <View key={index} style={styles.detalheLinha}>
-      {linha.map((item) => (
-        <View key={item.rotulo} style={styles.detalheColuna}>
-          <Text style={styles.detalheRotulo}>
-            {item.rotulo}
-          </Text>
-          <Text style={styles.detalheValor}>
-            {item.valor}
-          </Text>
-        </View>
-      ))}
-    </View>
-  ))}
+              {detalhes.map((linha, index) => (
+                <View key={index} style={styles.detalheLinha}>
+                  {linha.map((item) => (
+                    <View key={item.rotulo} style={styles.detalheColuna}>
+                      <Text style={styles.detalheRotulo}>
+                        {item.rotulo}
+                      </Text>
+                      <Text style={styles.detalheValor}>
+                        {item.valor}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ))}
             </ScrollView>
 
             <Pressable
@@ -900,7 +895,7 @@ export default function ReservaScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#ccfce4"
+    backgroundColor: "#FFFFFF"
   },
 
   container: {
@@ -909,29 +904,37 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    height: 75,
+    height: 60,
     backgroundColor: "#FFF",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 30
+    paddingHorizontal: 15,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
   },
 
   backButton: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     justifyContent: "center",
-    alignItems: "flex-start"
+    alignItems: "flex-start",
+    zIndex: 2,
   },
 
   headerSpace: {
-    width: 40
+    width: 38
   },
 
   logo: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#007A33"
+    fontSize: 22,
+    fontWeight: "900",
+    letterSpacing: 1,
+    color: "#007A33",
+    textAlign: "center"
   },
 
   backIcon: {
@@ -947,13 +950,6 @@ const styles = StyleSheet.create({
   content: {
     padding: 30,
     paddingBottom: 60
-  },
-
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#007A33",
-    marginBottom: 20
   },
 
   label: {
@@ -1114,27 +1110,27 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: "center"
   },
-  
+
   detalheLinha: {
-  flexDirection: "row",
-  gap: 16,
-  paddingVertical: 10,
-},
+    flexDirection: "row",
+    gap: 16,
+    paddingVertical: 10,
+  },
 
-detalheColuna: {
-  flex: 1,
-  minWidth: 0,
-},
+  detalheColuna: {
+    flex: 1,
+    minWidth: 0,
+  },
 
-detalheRotulo: {
-  fontSize: 13,
-  color: "#777",
-  marginBottom: 2,
-},
+  detalheRotulo: {
+    fontSize: 13,
+    color: "#777",
+    marginBottom: 2,
+  },
 
-detalheValor: {
-  fontSize: 16,
-  fontWeight: "bold",
-  color: "#333",
-},
+  detalheValor: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+  },
 });

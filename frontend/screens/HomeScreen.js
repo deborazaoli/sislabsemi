@@ -84,7 +84,6 @@ export default function HomeScreen({ navigation, route }) {
     }
   };
 
-
   useFocusEffect(
     useCallback(() => {
       buscarReservas();
@@ -142,7 +141,7 @@ export default function HomeScreen({ navigation, route }) {
     return `${partes[2]}/${partes[1]}/${partes[0]}`;
   };
 
-  // FORMATAR HORÁRIO
+  // FORMATAR HORÁRIO CORRIGIDO
   const formatarHorario = (
     horaRetirada,
     horaDevolucao
@@ -172,361 +171,360 @@ export default function HomeScreen({ navigation, route }) {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <View style={styles.container}>
 
-      <View
-        style={[
-          styles.header,
-          {
-            height: isSmallScreen ? 80 : 90,
-            paddingHorizontal:
-              isSmallScreen ? 20 : 30,
-          },
-        ]}
-      >
-
-        <Text
+        <View
           style={[
-            styles.logo,
+            styles.header,
             {
-              fontSize:
-                isSmallScreen ? 28 : 32,
+              height: isSmallScreen ? 80 : 90,
+              paddingHorizontal:
+                isSmallScreen ? 20 : 30,
             },
           ]}
         >
-          SISLAB
-        </Text>
 
-        <Pressable
-          style={[
-            styles.userButton,
-            {
-              width:
-                isSmallScreen ? 48 : 54,
-              height:
-                isSmallScreen ? 48 : 54,
-              borderRadius:
-                isSmallScreen ? 24 : 27,
-            },
-          ]}
-          onPress={() =>
-            navigation.navigate("Logout")
-          }
-        >
-          <Image
-            source={require("../assets/user.png")}
-            style={styles.userIcon}
-          />
-        </Pressable>
-
-      </View>
-      
-
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingHorizontal:
-              isSmallScreen ? 20 : 30,
-            paddingTop:
-              isSmallScreen ? 25 : 35,
-            paddingBottom: 40,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-
-        <Text
-          style={[
-            styles.welcome,
-            {
-              fontSize:
-                isSmallScreen ? 20 : 24,
-            },
-          ]}
-        >
-          Olá, {nomeUsuario}!
-        </Text>
-
-        <Text style={styles.subtitle}>
-          O que você deseja fazer?
-        </Text>
-
-        <View style={styles.cardsContainer}>
-
-          {/* FAZER RESERVA */}
+          <Text
+            style={[
+              styles.logo,
+              {
+                fontSize:
+                  isSmallScreen ? 28 : 32,
+              },
+            ]}
+          >
+            SISLAB
+          </Text>
 
           <Pressable
             style={[
-              styles.card,
+              styles.userButton,
               {
-                width: cardWidth,
-                height: cardHeight,
+                width:
+                  isSmallScreen ? 48 : 54,
+                height:
+                  isSmallScreen ? 48 : 54,
+                borderRadius:
+                  isSmallScreen ? 24 : 27,
               },
             ]}
             onPress={() =>
-              navigation.navigate("Reserva", {
-                usuario: usuario,
-              })
+              navigation.navigate("Perfil", { usuario })
             }
           >
-
-            <View style={styles.iconContainer}>
-
-              <Image
-                source={require("../assets/reserva.png")}
-                style={styles.icon}
-              />
-
-            </View>
-
-            <View style={styles.button}>
-
-              <Text style={styles.buttonText}>
-                Fazer Reserva
-              </Text>
-
-            </View>
-
-          </Pressable>
-
-          {/* CALENDÁRIO */}
-
-          <Pressable
-            style={[
-              styles.card,
-              {
-                width: cardWidth,
-                height: cardHeight,
-              },
-            ]}
-            onPress={() =>
-              navigation.navigate("Calendario")
-            }
-          >
-
-            <View style={styles.iconContainer}>
-
-              <Image
-                source={require("../assets/calendario.png")}
-                style={styles.icon}
-              />
-
-            </View>
-
-            <View style={styles.button}>
-
-              <Text style={styles.buttonText}>
-                Calendário
-              </Text>
-
-            </View>
-
-          </Pressable>
-
-          {/* MINHAS RESERVAS */}
-
-          <Pressable
-            style={[
-              styles.card,
-              {
-                width: cardWidth,
-                height: cardHeight,
-              },
-            ]}
-            onPress={() =>
-              navigation.navigate("MinhasReservas", {
-                usuario: usuario,
-              })
-            }
-          >
-
-            <View style={styles.iconContainer}>
-
-              <Image
-                source={require("../assets/historico.png")}
-                style={styles.icon}
-              />
-
-            </View>
-
-            <View style={styles.button}>
-
-              <Text style={styles.buttonText}>
-                Minhas Reservas
-              </Text>
-
-            </View>
-
-          </Pressable>
-
-          {/* RELATAR PROBLEMA */}
-
-          <Pressable
-            style={[
-              styles.card,
-              {
-                width: cardWidth,
-                height: cardHeight,
-              },
-            ]}
-            onPress={() =>
-              navigation.navigate(
-                "RelatarProblema",
-                {
-                  usuario: usuario,
-                }
-              )
-            }
-          >
-
-            <View style={styles.iconContainer}>
-
-              <Image
-                source={require("../assets/problema.png")}
-                style={styles.icon}
-              />
-
-            </View>
-
-            <View style={styles.button}>
-
-              <Text style={styles.buttonText}>
-                Relatar Problema
-              </Text>
-
-            </View>
-
+            <Image
+              source={require("../assets/user.png")}
+              style={styles.userIcon}
+            />
           </Pressable>
 
         </View>
+        
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingHorizontal:
+                isSmallScreen ? 20 : 30,
+              paddingTop:
+                isSmallScreen ? 25 : 35,
+              paddingBottom: 40,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
 
-        {/* ==================================================
-            RESERVAS DE HOJE
-        ================================================== */}
+          <Text
+            style={[
+              styles.welcome,
+              {
+                fontSize:
+                  isSmallScreen ? 20 : 24,
+              },
+            ]}
+          >
+            Olá, {nomeUsuario}!
+          </Text>
 
-        <View style={styles.todayBox}>
+          <Text style={styles.subtitle}>
+            O que você deseja fazer?
+          </Text>
 
-          <View>
-            <Text style={styles.todayTitle}>
-              Reservas de hoje
-            </Text>
+          <View style={styles.cardsContainer}>
 
-            <Text style={styles.todaySubtitle}>
-              Reservas ativas para hoje
-            </Text>
+            {/* FAZER RESERVA */}
+
+            <Pressable
+              style={[
+                styles.card,
+                {
+                  width: cardWidth,
+                  height: cardHeight,
+                },
+              ]}
+              onPress={() =>
+                navigation.navigate("Reserva", {
+                  usuario: usuario,
+                })
+              }
+            >
+
+              <View style={styles.iconContainer}>
+
+                <Image
+                  source={require("../assets/reserva.png")}
+                  style={styles.icon}
+                />
+
+              </View>
+
+              <View style={styles.button}>
+
+                <Text style={styles.buttonText}>
+                  Fazer Reserva
+                </Text>
+
+              </View>
+
+            </Pressable>
+
+            {/* CALENDÁRIO */}
+
+            <Pressable
+              style={[
+                styles.card,
+                {
+                  width: cardWidth,
+                  height: cardHeight,
+                },
+              ]}
+              onPress={() =>
+                navigation.navigate("Calendario")
+              }
+            >
+
+              <View style={styles.iconContainer}>
+
+                <Image
+                  source={require("../assets/calendario.png")}
+                  style={styles.icon}
+                />
+
+              </View>
+
+              <View style={styles.button}>
+
+                <Text style={styles.buttonText}>
+                  Calendário
+                </Text>
+
+              </View>
+
+            </Pressable>
+
+            {/* MINHAS RESERVAS */}
+
+            <Pressable
+              style={[
+                styles.card,
+                {
+                  width: cardWidth,
+                  height: cardHeight,
+                },
+              ]}
+              onPress={() =>
+                navigation.navigate("MinhasReservas", {
+                  usuario: usuario,
+                })
+              }
+            >
+
+              <View style={styles.iconContainer}>
+
+                <Image
+                  source={require("../assets/historico.png")}
+                  style={styles.icon}
+                />
+
+              </View>
+
+              <View style={styles.button}>
+
+                <Text style={styles.buttonText}>
+                  Minhas Reservas
+                </Text>
+
+              </View>
+
+            </Pressable>
+
+            {/* RELATAR PROBLEMA */}
+
+            <Pressable
+              style={[
+                styles.card,
+                {
+                  width: cardWidth,
+                  height: cardHeight,
+                },
+              ]}
+              onPress={() =>
+                navigation.navigate(
+                  "RelatarProblema",
+                  {
+                    usuario: usuario,
+                  }
+                )
+              }
+            >
+
+              <View style={styles.iconContainer}>
+
+                <Image
+                  source={require("../assets/problema.png")}
+                  style={styles.icon}
+                />
+
+              </View>
+
+              <View style={styles.button}>
+
+                <Text style={styles.buttonText}>
+                  Relatar Problema
+                </Text>
+
+              </View>
+
+            </Pressable>
+
           </View>
 
-          <View style={styles.todayNumberContainer}>
+          {/* ==================================================
+              RESERVAS DE HOJE
+          ================================================== */}
+
+          <View style={styles.todayBox}>
+
+            <View>
+              <Text style={styles.todayTitle}>
+                Reservas de hoje
+              </Text>
+
+              <Text style={styles.todaySubtitle}>
+                Reservas ativas para hoje
+              </Text>
+            </View>
+
+            <View style={styles.todayNumberContainer}>
+
+              {carregandoReservas ? (
+                <ActivityIndicator
+                  size="small"
+                  color="#007A33"
+                />
+              ) : (
+                <Text style={styles.todayNumber}>
+                  {quantidadeReservasHoje}
+                </Text>
+              )}
+
+            </View>
+
+          </View>
+
+          {/* ==================================================
+              RESERVAS RECENTES
+          ================================================== */}
+
+          <Text
+            style={[
+              styles.recentTitle,
+              {
+                fontSize:
+                  isSmallScreen ? 20 : 24,
+              },
+            ]}
+          >
+            Minhas reservas recentes
+          </Text>
+
+          <View style={styles.recentReservations}>
 
             {carregandoReservas ? (
-              <ActivityIndicator
-                size="small"
-                color="#007A33"
-              />
-            ) : (
-              <Text style={styles.todayNumber}>
-                {quantidadeReservasHoje}
+
+              <View style={styles.loadingContainer}>
+
+                <ActivityIndicator
+                  size="small"
+                  color="#007A33"
+                />
+
+                <Text style={styles.loadingText}>
+                  Carregando reservas...
+                </Text>
+
+              </View>
+
+            ) : reservasRecentes.length === 0 ? (
+
+              <Text style={styles.emptyText}>
+                Você ainda não possui reservas
+                recentes.
               </Text>
+
+            ) : (
+
+              reservasRecentes.map(
+                (reserva, index) => (
+
+                  <View
+                    key={
+                      reserva.idReserva ||
+                      reserva.codigoReserva ||
+                      index
+                    }
+                    style={[
+                      styles.reservaItem,
+                      index ===
+                        reservasRecentes.length - 1 &&
+                        styles.ultimoItem,
+                    ]}
+                  >
+
+                    <Text style={styles.recentText}>
+
+                      {reserva.nomeRecurso ||
+                        "Recurso reservado"}
+
+                    </Text>
+
+                    <Text
+                      style={styles.reservaDetails}
+                    >
+
+                      {formatarData(
+                        reserva.reservaData
+                      )}
+
+                      {" • "}
+
+                      {formatarHorario(
+                        reserva.horaRetirada,
+                        reserva.horaDevolucao
+                      )}
+
+                    </Text>
+
+                  </View>
+
+                )
+              )
+
             )}
 
           </View>
 
-        </View>
+        </ScrollView>
 
-        {/* ==================================================
-            RESERVAS RECENTES
-        ================================================== */}
-
-        <Text
-          style={[
-            styles.recentTitle,
-            {
-              fontSize:
-                isSmallScreen ? 20 : 24,
-            },
-          ]}
-        >
-          Minhas reservas recentes
-        </Text>
-
-        <View style={styles.recentReservations}>
-
-          {carregandoReservas ? (
-
-            <View style={styles.loadingContainer}>
-
-              <ActivityIndicator
-                size="small"
-                color="#007A33"
-              />
-
-              <Text style={styles.loadingText}>
-                Carregando reservas...
-              </Text>
-
-            </View>
-
-          ) : reservasRecentes.length === 0 ? (
-
-            <Text style={styles.emptyText}>
-              Você ainda não possui reservas
-              recentes.
-            </Text>
-
-          ) : (
-
-            reservasRecentes.map(
-              (reserva, index) => (
-
-                <View
-                  key={
-                    reserva.idReserva ||
-                    reserva.codigoReserva ||
-                    index
-                  }
-                  style={[
-                    styles.reservaItem,
-                    index ===
-                      reservasRecentes.length - 1 &&
-                      styles.ultimoItem,
-                  ]}
-                >
-
-                  <Text style={styles.recentText}>
-
-                    {reserva.nomeRecurso ||
-                      "Recurso reservado"}
-
-                  </Text>
-
-                  <Text
-                    style={styles.reservaDetails}
-                  >
-
-                    {formatarData(
-                      reserva.reservaData
-                    )}
-
-                    {" • "}
-
-                    {formatarHorario(
-                      reserva.horaRetirada,
-                      reserva.horaDevolucao
-                    )}
-
-                  </Text>
-
-                </View>
-
-              )
-            )
-
-          )}
-
-        </View>
-
-      </ScrollView>
-
-    </View>
+      </View>
     </SafeAreaView>
   );
 }

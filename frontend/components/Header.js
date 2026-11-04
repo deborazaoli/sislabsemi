@@ -10,74 +10,106 @@ import {
 export default function Header({
   titulo,
   navigation,
-  admin = false
+  usuario
 }) {
   return (
     <View style={styles.header}>
-
-      <Pressable onPress={() => navigation.goBack()}>
-        <Text style={styles.icon}>←</Text>
+      {/* BOTÃO DE VOLTAR */}
+      <Pressable
+        onPress={() => navigation.goBack()}
+        style={styles.voltarButton}
+      >
+        <Image
+          source={require("../assets/seta.png")}
+          style={styles.backIcon}
+        />
       </Pressable>
 
+      {/* TÍTULO CENTRALIZADO */}
       <View style={styles.center}>
-        <Image
-          source={{
-            uri: "https://picsum.photos/80"
-          }}
-          style={styles.logo}
-        />
-
         <Text style={styles.titulo}>
           {titulo}
         </Text>
       </View>
 
+      {/* BOTÃO DE PERFIL */}
       <Pressable
         onPress={() =>
-          navigation.navigate(
-            admin ? "Logout" : "Login"
-          )
+          navigation.navigate("Perfil", { usuario })
         }
+        style={styles.userButton}
       >
-        <Text style={styles.icon}>
-          👤
-        </Text>
+        <Image
+          source={require("../assets/user.png")}
+          style={styles.userIcon}
+        />
       </Pressable>
-
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   header: {
-    height: 75,
+    height: 60,
     backgroundColor: "#FFFFFF",
-
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    paddingHorizontal: 15,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
+  },
 
-    paddingHorizontal: 30
+  voltarButton: {
+    width: 38,
+    height: 38,
+    justifyContent: "center",
+    alignItems: "flex-start",
+    zIndex: 2,
+  },
+
+  backIcon: {
+    width: 28,
+    height: 28,
+    resizeMode: "contain",
   },
 
   center: {
-    alignItems: "center"
-  },
-
-  logo: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginBottom: 4
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   titulo: {
     fontSize: 22,
-    fontWeight: "bold"
+    fontWeight: "900",
+    letterSpacing: 1,
+    color: "#007A33",
+    textAlign: "center",
   },
 
-  icon: {
-    fontSize: 24,
-    color: "#007A33"
-  }
+  userButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#d5eee3",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+
+  userIcon: {
+    width: "60%",
+    height: "60%",
+    tintColor: "#006633",
+    resizeMode: "contain",
+  },
 });

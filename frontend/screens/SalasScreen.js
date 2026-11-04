@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Image
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useFocusEffect } from "@react-navigation/native";
 
@@ -37,86 +38,92 @@ export default function SalasScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <View style={styles.container}>
 
-      <View style={styles.header}>
+        {/* HEADER PADRONIZADO */}
+        <View style={styles.header}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Image
+              source={require("../assets/seta.png")}
+              style={styles.backIcon}
+            />
+          </Pressable>
 
-        <Pressable onPress={() => navigation.goBack()}>
-          <Image
-            source={require("../assets/seta.png")}
-            style={styles.icon}
-          />
-        </Pressable>
+          <Text style={styles.tituloHeader}>Salas</Text>
 
-        <Text style={styles.tituloHeader}>
-          SISLAB
-        </Text>
+          <View style={styles.headerSpace} />
+        </View>
 
-        <View style={{ width: 28 }} />
+        <View style={styles.content}>
 
-      </View>
+          <Pressable
+            style={styles.addBtn}
+            onPress={() =>
+              navigation.navigate("RecursoForm", {
+                tipo: "sala"
+              })
+            }
+          >
+            <Text style={styles.addText}>+</Text>
+          </Pressable>
 
-      <View style={styles.content}>
+          <FlatList
+            data={dados}
+            keyExtractor={(item) => String(item.idRecurso)}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.list}
+            renderItem={({ item }) => (
+              <View style={styles.card}>
 
-        <Pressable
-          style={styles.addBtn}
-          onPress={() =>
-            navigation.navigate("RecursoForm", {
-              tipo: "sala"
-            })
-          }
-        >
-          <Text style={styles.addText}>+</Text>
-        </Pressable>
+                <Text style={styles.nome}>
+                  {item.nome}
+                </Text>
 
-        <FlatList
-          data={dados}
-          keyExtractor={(item) => String(item.idRecurso)}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
+                <View style={styles.actions}>
 
-              <Text style={styles.nome}>
-                {item.nome}
-              </Text>
+                  <Pressable
+                    style={styles.btn}
+                    onPress={() =>
+                      navigation.navigate("RecursoForm", {
+                        recurso: item
+                      })
+                    }
+                  >
+                    <Text style={styles.btnText}>
+                      Editar
+                    </Text>
+                  </Pressable>
 
-              <View style={styles.actions}>
+                  <Pressable
+                    style={styles.btnExcluir}
+                    onPress={() => excluir(item.idRecurso)}
+                  >
+                    <Text style={styles.btnText}>
+                      Excluir
+                    </Text>
+                  </Pressable>
 
-                <Pressable
-                  style={styles.btn}
-                  onPress={() =>
-                    navigation.navigate("RecursoForm", {
-                      recurso: item
-                    })
-                  }
-                >
-                  <Text style={styles.btnText}>
-                    Editar
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  style={styles.btn}
-                  onPress={() => excluir(item.idRecurso)}
-                >
-                  <Text style={styles.btnText}>
-                    Excluir
-                  </Text>
-                </Pressable>
+                </View>
 
               </View>
+            )}
+          />
 
-            </View>
-          )}
-        />
-
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#FFFFFF"
+  },
 
   container: {
     flex: 1,
@@ -124,21 +131,40 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    height: 75,
-    backgroundColor: "#FFFFFF",
+    height: 60,
+    backgroundColor: "#FFF",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 30
+    paddingHorizontal: 15,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
+  },
+
+  backButton: {
+    width: 38,
+    height: 38,
+    justifyContent: "center",
+    alignItems: "flex-start",
+    zIndex: 2,
+  },
+
+  headerSpace: {
+    width: 38
   },
 
   tituloHeader: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#007A33"
+    fontSize: 22,
+    fontWeight: "900",
+    letterSpacing: 1,
+    color: "#007A33",
+    textAlign: "center"
   },
 
-  icon: {
+  backIcon: {
     width: 28,
     height: 28,
     resizeMode: "contain"
@@ -155,33 +181,48 @@ const styles = StyleSheet.create({
   },
 
   addBtn: {
-    width: 45,
-    height: 45,
-    borderRadius: 30,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "#FFF",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20
+    marginBottom: 20,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
   },
 
   addText: {
-    fontSize: 30,
+    fontSize: 28,
     color: "#007A33",
-    fontWeight: "bold"
+    fontWeight: "bold",
+    lineHeight: 30
   },
 
   card: {
     backgroundColor: "#FFF",
-    padding: 12,
-    borderRadius: 4,
+    padding: 14,
+    borderRadius: 12,
     marginBottom: 10,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center"
+    alignItems: "center",
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
   },
 
   nome: {
-    fontSize: 16
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    flex: 1,
+    marginRight: 10
   },
 
   actions: {
@@ -190,14 +231,23 @@ const styles = StyleSheet.create({
 
   btn: {
     backgroundColor: "#007A33",
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginLeft: 8
+  },
+
+  btnExcluir: {
+    backgroundColor: "#E53935",
+    paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     marginLeft: 8
   },
 
   btnText: {
-    color: "#FFF"
+    color: "#FFF",
+    fontWeight: "bold",
+    fontSize: 13
   }
-
 });
