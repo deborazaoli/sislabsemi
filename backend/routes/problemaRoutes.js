@@ -36,9 +36,6 @@ router.post("/", (req, res) => {
     descricao
   } = req.body;
 
-  // ----------------------------------------------
-  // VERIFICAR CAMPOS OBRIGATÓRIOS
-  // ----------------------------------------------
   if (!tipoRecurso || !nomeRecurso || !descricao) {
     return res.status(400).json({
       message: "Preencha o tipo, o local do recurso e a descrição do problema."
@@ -46,7 +43,7 @@ router.post("/", (req, res) => {
   }
 
   const dataRelato = obterAgoraBrasil();
-  const statusProblema = "pendente"; // status inicial para a direção gerenciar
+  const statusProblema = "pendente";
 
   const sql = `
     INSERT INTO problema (
@@ -114,7 +111,30 @@ router.get("/", (req, res) => {
 });
 
 // ======================================================
-// ATUALIZAR STATUS DO PROBLEMA (Ex: de 'pendente' para 'resolvido')
+// LISTAR PROBLEMAS DO USUÁRIO LOGADO
+// ======================================================
+router.get("/usuario/:id", (req, res) => {
+  const sql = `
+    SELECT * 
+    FROM problema 
+    WHERE idUsuario = ?
+    ORDER BY dataRelato DESC
+  `;
+
+  db.query(sql, [req.params.id], (err, results) => {
+    if (err) {
+      console.log("Erro ao buscar relatos do usuário:", err);
+      return res.status(500).json({
+        message: "Erro ao buscar relatos do usuário."
+      });
+    }
+
+    res.json(results);
+  });
+});
+
+// ======================================================
+// ATUALIZAR STATUS DO PROBLEMA
 // ======================================================
 router.put("/:id/status", (req, res) => {
   const { statusProblema } = req.body;

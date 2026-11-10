@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -15,10 +15,10 @@ import {
   ActivityIndicator
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 
 import API_URL from "../services/api";
 
-// Lista pré-definida de problemas comuns
 const PROBLEMAS_COMUNS = [
   "Ar-condicionado quebrado / não gela",
   "Janela emperrada",
@@ -34,19 +34,26 @@ const PROBLEMAS_COMUNS = [
 export default function RelatarProblemaScreen({ navigation, route }) {
   const usuario = route?.params?.usuario || {};
 
-  const [tipoRecurso, setTipoRecurso] = useState("sala"); // "sala" ou "laboratorio"
-  
+  // Aba ativa: "novo" ou "meus"
+  const [abaAtiva, setAbaAtiva] = useState("novo");
+
+  // Estados do formulário de Novo Relato
+  const [tipoRecurso, setTipoRecurso] = useState("sala");
   const [recursosList, setRecursosList] = useState([]);
   const [carregandoRecursos, setCarregandoRecursos] = useState(false);
   const [recursoSelecionado, setRecursoSelecionado] = useState(null);
-
   const [problemaSelecionado, setProblemaSelecionado] = useState("");
   const [observacaoExtra, setObservacaoExtra] = useState("");
-
+  
   const [modalLocalVisivel, setModalLocalVisivel] = useState(false);
   const [modalProblemaVisivel, setModalProblemaVisivel] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
+  // Estados da aba "Meus Relatos"
+  const [meusRelatos, setMeusRelatos] = useState([]);
+  const [carregandoRelatos, setCarregandoRelatos] = useState(false);
+
+  // Carregar recursos ao mudar o tipo (Sala / Laboratório)
   useEffect(() => {
     carregarRecursosDoBackend();
   }, [tipoRecurso]);
@@ -54,7 +61,7 @@ export default function RelatarProblemaScreen({ navigation, route }) {
   const carregarRecursosDoBackend = async () => {
     try {
       setCarregandoRecursos(true);
-      setRecursoSelecionado(null); // Reseta a seleção ao trocar de tipo
+      setRecursoSelecionado(null);
 
       const res = await fetch(`${API_URL}/recursos?tipo=${tipoRecurso}`);
       const data = await res.json();
@@ -71,6 +78,35 @@ export default function RelatarProblemaScreen({ navigation, route }) {
       setCarregandoRecursos(false);
     }
   };
+
+  // Carregar relatos do usuário quando entrar na aba "meus" ou focar na tela
+  const carregarMeusRelatos = async () => {
+    if (!usuario?.idUsuario) return;
+
+    try {
+      setCarregandoRelatos(true);
+      const res = await fetch(`${API_URL}/problemas/usuario/${usuario.idUsuario}`);
+      const data = await res.json();
+
+      if (Array.isArray(data)) {
+        setMeusRelatos(data);
+      } else {
+        setMeusRelatos([]);
+      }
+    } catch (error) {
+      console.log("Erro ao buscar meus relatos:", error);
+    } finally {
+      setCarregandoRelatos(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      if (abaAtiva === "meus") {
+        carregarMeusRelatos();
+      }
+    }, [abaAtiva])
+  );
 
   const enviarRelato = async () => {
     if (!recursoSelecionado || !problemaSelecionado.trim()) {
@@ -94,12 +130,9 @@ export default function RelatarProblemaScreen({ navigation, route }) {
         descricao: descricaoFinal
       };
 
-      // REQUISIÇÃO REAL PARA O BACKEND
       const res = await fetch(`${API_URL}/problemas`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
 
@@ -114,16 +147,43 @@ export default function RelatarProblemaScreen({ navigation, route }) {
         "Obrigado por avisar. O seu relato foi enviado com sucesso para a direção.",
         [
           {
-            text: "OK",
-            onPress: () => navigation.goBack()
+            text: "Ver meus relatos",
+            onPress: () => {
+              setRecursoSelecionado(null);
+              setProblemaSelecionado("");
+              setObservacaoExtra("");
+              setAbaAtiva("meus");
+              carregarMeusRelatos();
+            }
           }
         ]
       );
     } catch (error) {
       console.log("Erro ao enviar problema:", error);
-      Alert.alert("Erro", error.message || "Não foi possível enviar o relato no momento. Tente novamente.");
+      Alert.alert("Erro", error.message || "Não foi possível enviar o relato no momento.");
     } finally {
       setEnviando(false);
+    }
+  };
+
+  const formatarData = (dataIso) => {
+    if (!dataIso) return "";
+    const data = new Date(dataIso);
+    return data.toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  };
+
+  const getCorStatus = (status) => {
+    switch (status) {
+      case "pendente": return { bg: "#FFF3CD", text: "#856404", label: "Pendente" };
+      case "em_andamento": return { bg: "#CCE5FF", text: "#004085", label: "Em Andamento" };
+      case "resolvido": return { bg: "#D4EDDA", text: "#155724", label: "Resolvido" };
+      default: return { bg: "#E2E3E5", text: "#383D41", label: status };
     }
   };
 
@@ -150,101 +210,150 @@ export default function RelatarProblemaScreen({ navigation, route }) {
           <View style={styles.headerSpace} />
         </View>
 
-        <ScrollView
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-
-          <Text style={styles.label}>Onde está o problema?</Text>
-          <View style={styles.tipoContainer}>
-            <Pressable
-              style={[
-                styles.tipoBotao,
-                tipoRecurso === "sala" && styles.tipoBotaoAtivo
-              ]}
-              onPress={() => setTipoRecurso("sala")}
-            >
-              <Text
-                style={[
-                  styles.tipoTexto,
-                  tipoRecurso === "sala" && styles.tipoTextoAtivo
-                ]}
-              >
-                Sala
-              </Text>
-            </Pressable>
-
-            <Pressable
-              style={[
-                styles.tipoBotao,
-                tipoRecurso === "laboratorio" && styles.tipoBotaoAtivo
-              ]}
-              onPress={() => setTipoRecurso("laboratorio")}
-            >
-              <Text
-                style={[
-                  styles.tipoTexto,
-                  tipoRecurso === "laboratorio" && styles.tipoTextoAtivo
-                ]}
-              >
-                Laboratório
-              </Text>
-            </Pressable>
-          </View>
-
-          <Text style={styles.label}>Selecione o Local</Text>
+        {/* ABAS DE NAVEGAÇÃO */}
+        <View style={styles.abasContainer}>
           <Pressable
-            style={styles.dropdownSelector}
-            onPress={() => setModalLocalVisivel(true)}
+            style={[styles.abaBotao, abaAtiva === "novo" && styles.abaAtiva]}
+            onPress={() => setAbaAtiva("novo")}
           >
-            {carregandoRecursos ? (
-              <ActivityIndicator size="small" color="#007A33" />
+            <Text style={[styles.abaTexto, abaAtiva === "novo" && styles.abaTextoAtivo]}>
+              Novo Relato
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={[styles.abaBotao, abaAtiva === "meus" && styles.abaAtiva]}
+            onPress={() => {
+              setAbaAtiva("meus");
+              carregarMeusRelatos();
+            }}
+          >
+            <Text style={[styles.abaTexto, abaAtiva === "meus" && styles.abaTextoAtivo]}>
+              Acompanhar Relatos
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* CONTEÚDO DA ABA: NOVO RELATO */}
+        {abaAtiva === "novo" ? (
+          <ScrollView
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Text style={styles.label}>Onde está o problema?</Text>
+            <View style={styles.tipoContainer}>
+              <Pressable
+                style={[styles.tipoBotao, tipoRecurso === "sala" && styles.tipoBotaoAtivo]}
+                onPress={() => setTipoRecurso("sala")}
+              >
+                <Text style={[styles.tipoTexto, tipoRecurso === "sala" && styles.tipoTextoAtivo]}>
+                  Sala
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={[styles.tipoBotao, tipoRecurso === "laboratorio" && styles.tipoBotaoAtivo]}
+                onPress={() => setTipoRecurso("laboratorio")}
+              >
+                <Text style={[styles.tipoTexto, tipoRecurso === "laboratorio" && styles.tipoTextoAtivo]}>
+                  Laboratório
+                </Text>
+              </Pressable>
+            </View>
+
+            <Text style={styles.label}>Selecione o Local</Text>
+            <Pressable
+              style={styles.dropdownSelector}
+              onPress={() => setModalLocalVisivel(true)}
+            >
+              {carregandoRecursos ? (
+                <ActivityIndicator size="small" color="#007A33" />
+              ) : (
+                <Text style={[styles.dropdownText, !recursoSelecionado && { color: "#888" }]}>
+                  {recursoSelecionado ? recursoSelecionado.nome : `Toque para escolher a ${tipoRecurso}...`}
+                </Text>
+              )}
+              <Text style={styles.dropdownIcon}>▼</Text>
+            </Pressable>
+          
+            <Text style={styles.label}>Qual é o problema?</Text>
+            <Pressable
+              style={styles.dropdownSelector}
+              onPress={() => setModalProblemaVisivel(true)}
+            >
+              <Text style={[styles.dropdownText, !problemaSelecionado && { color: "#888" }]}>
+                {problemaSelecionado || "Selecione o problema na lista..."}
+              </Text>
+              <Text style={styles.dropdownIcon}>▼</Text>
+            </Pressable>
+
+            <Text style={styles.label}>Detalhes Adicionais (Opcional)</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Ex: Fica na parede do fundo..."
+              placeholderTextColor="#888"
+              value={observacaoExtra}
+              onChangeText={setObservacaoExtra}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+
+            <Pressable
+              style={[styles.btnEnviar, enviando && { opacity: 0.7 }]}
+              onPress={enviarRelato}
+              disabled={enviando}
+            >
+              <Text style={styles.btnEnviarTexto}>
+                {enviando ? "Enviando..." : "Enviar Relato"}
+              </Text>
+            </Pressable>
+          </ScrollView>
+        ) : (
+          /* CONTEÚDO DA ABA: ACOMPANHAR RELATOS */
+          <View style={styles.contentMeus}>
+            {carregandoRelatos ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#007A33" />
+                <Text style={styles.loadingText}>Carregando seus relatos...</Text>
+              </View>
+            ) : meusRelatos.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>Você ainda não enviou nenhum relato de problema.</Text>
+              </View>
             ) : (
-              <Text style={[styles.dropdownText, !recursoSelecionado && { color: "#888" }]}>
-                {recursoSelecionado ? recursoSelecionado.nome : `Toque para escolher a ${tipoRecurso}...`}
-              </Text>
+              <FlatList
+                data={meusRelatos}
+                keyExtractor={(item) => String(item.idProblema)}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.listContainer}
+                renderItem={({ item }) => {
+                  const statusInfo = getCorStatus(item.statusProblema);
+                  return (
+                    <View style={styles.cardRelato}>
+                      <View style={styles.cardHeader}>
+                        <Text style={styles.cardLocal}>
+                          {item.tipoRecurso}: {item.nomeRecurso}
+                        </Text>
+                        <View style={[styles.badge, { backgroundColor: statusInfo.bg }]}>
+                          <Text style={[styles.badgeText, { color: statusInfo.text }]}>
+                            {statusInfo.label}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <Text style={styles.cardDescricao}>{item.descricao}</Text>
+                      <Text style={styles.cardData}>Enviado em: {formatarData(item.dataRelato)}</Text>
+                    </View>
+                  );
+                }}
+              />
             )}
-            <Text style={styles.dropdownIcon}>▼</Text>
-          </Pressable>
-        
-          <Text style={styles.label}>Qual é o problema?</Text>
-          <Pressable
-            style={styles.dropdownSelector}
-            onPress={() => setModalProblemaVisivel(true)}
-          >
-            <Text style={[styles.dropdownText, !problemaSelecionado && { color: "#888" }]}>
-              {problemaSelecionado || "Selecione o problema na lista..."}
-            </Text>
-            <Text style={styles.dropdownIcon}>▼</Text>
-          </Pressable>
-
-          {/* DETALHES ADICIONAIS (OPCIONAL) */}
-          <Text style={styles.label}>Detalhes Adicionais (Opcional)</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Ex: Fica na parede do fundo..."
-            placeholderTextColor="#888"
-            value={observacaoExtra}
-            onChangeText={setObservacaoExtra}
-            multiline
-            numberOfLines={3}
-            textAlignVertical="top"
-          />
-
-          {/* BOTÃO ENVIAR */}
-          <Pressable
-            style={[styles.btnEnviar, enviando && { opacity: 0.7 }]}
-            onPress={enviarRelato}
-            disabled={enviando}
-          >
-            <Text style={styles.btnEnviarTexto}>
-              {enviando ? "Enviando..." : "Enviar Relato"}
-            </Text>
-          </Pressable>
-
-        </ScrollView>
+          </View>
+        )}
     
+        {/* MODAL DE LOCAIS */}
         <Modal
           visible={modalLocalVisivel}
           transparent={true}
@@ -291,7 +400,7 @@ export default function RelatarProblemaScreen({ navigation, route }) {
           </View>
         </Modal>
 
-        {/* MODAL 2: LISTA DE PROBLEMAS PADRÃO */}
+        {/* MODAL DE PROBLEMAS COMUNS */}
         <Modal
           visible={modalProblemaVisivel}
           transparent={true}
@@ -337,16 +446,8 @@ export default function RelatarProblemaScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFFFFF"
-  },
-
-  container: {
-    flex: 1,
-    backgroundColor: "#CCFCE4"
-  },
-
+  safeArea: { flex: 1, backgroundColor: "#FFFFFF" },
+  container: { flex: 1, backgroundColor: "#CCFCE4" },
   header: {
     height: 60,
     backgroundColor: "#FFF",
@@ -360,76 +461,48 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowRadius: 2,
   },
+  backButton: { width: 38, height: 38, justifyContent: "center", alignItems: "flex-start", zIndex: 2 },
+  backIcon: { width: 28, height: 28, resizeMode: "contain" },
+  tituloHeader: { fontSize: 22, fontWeight: "900", letterSpacing: 1, color: "#007A33", textAlign: "center" },
+  headerSpace: { width: 38 },
 
-  backButton: {
-    width: 38,
-    height: 38,
-    justifyContent: "center",
-    alignItems: "flex-start",
-    zIndex: 2,
-  },
-
-  backIcon: {
-    width: 28,
-    height: 28,
-    resizeMode: "contain"
-  },
-
-  tituloHeader: {
-    fontSize: 22,
-    fontWeight: "900",
-    letterSpacing: 1,
-    color: "#007A33",
-    textAlign: "center"
-  },
-
-  headerSpace: {
-    width: 38
-  },
-
-  content: {
-    padding: 20,
-    paddingBottom: 40
-  },
-
-  label: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#006633",
-    marginBottom: 8,
-    marginTop: 10
-  },
-
-  tipoContainer: {
+  // Estilos das Abas
+  abasContainer: {
     flexDirection: "row",
-    gap: 12,
-    marginBottom: 10
-  },
-
-  tipoBotao: {
-    flex: 1,
     backgroundColor: "#FFF",
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E2E2"
+  },
+  abaBotao: {
+    flex: 1,
+    paddingVertical: 10,
     alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: "#A6E4CF"
+    borderRadius: 20,
+    marginHorizontal: 5
   },
-
-  tipoBotaoAtivo: {
-    backgroundColor: "#007A33",
-    borderColor: "#007A33"
+  abaAtiva: {
+    backgroundColor: "#007A33"
   },
-
-  tipoTexto: {
-    fontSize: 15,
+  abaTexto: {
+    fontSize: 14,
     fontWeight: "bold",
     color: "#007A33"
   },
-
-  tipoTextoAtivo: {
+  abaTextoAtivo: {
     color: "#FFF"
   },
+
+  content: { padding: 20, paddingBottom: 40 },
+  contentMeus: { flex: 1, padding: 20 },
+  
+  label: { fontSize: 14, fontWeight: "bold", color: "#006633", marginBottom: 8, marginTop: 10 },
+  tipoContainer: { flexDirection: "row", gap: 12, marginBottom: 10 },
+  tipoBotao: { flex: 1, backgroundColor: "#FFF", paddingVertical: 12, borderRadius: 12, alignItems: "center", borderWidth: 1.5, borderColor: "#A6E4CF" },
+  tipoBotaoAtivo: { backgroundColor: "#007A33", borderColor: "#007A33" },
+  tipoTexto: { fontSize: 15, fontWeight: "bold", color: "#007A33" },
+  tipoTextoAtivo: { color: "#FFF" },
 
   dropdownSelector: {
     backgroundColor: "#FFF",
@@ -443,33 +516,11 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     minHeight: 50
   },
+  dropdownText: { fontSize: 15, color: "#333" },
+  dropdownIcon: { fontSize: 12, color: "#007A33", fontWeight: "bold" },
 
-  dropdownText: {
-    fontSize: 15,
-    color: "#333"
-  },
-
-  dropdownIcon: {
-    fontSize: 12,
-    color: "#007A33",
-    fontWeight: "bold"
-  },
-
-  input: {
-    backgroundColor: "#FFF",
-    borderWidth: 1,
-    borderColor: "#D5EEE3",
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 15,
-    color: "#333",
-    marginBottom: 5
-  },
-
-  textArea: {
-    height: 90,
-    paddingTop: 12
-  },
+  input: { backgroundColor: "#FFF", borderWidth: 1, borderColor: "#D5EEE3", borderRadius: 12, padding: 14, fontSize: 15, color: "#333", marginBottom: 5 },
+  textArea: { height: 90, paddingTop: 12 },
 
   btnEnviar: {
     backgroundColor: "#007A33",
@@ -483,84 +534,41 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
   },
+  btnEnviarTexto: { color: "#FFF", fontSize: 16, fontWeight: "bold" },
 
-  btnEnviarTexto: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "bold"
-  },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20
-  },
-
-  modalContent: {
+  // Estilos da lista de "Meus Relatos"
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loadingText: { marginTop: 10, color: "#007A33", fontWeight: "600" },
+  emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  emptyText: { color: "#666", fontSize: 15, textAlign: "center" },
+  listContainer: { paddingBottom: 20 },
+  cardRelato: {
     backgroundColor: "#FFF",
-    borderRadius: 20,
-    width: "100%",
-    maxHeight: "70%",
-    padding: 20,
-    elevation: 5,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 2,
     shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 3,
   },
+  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  cardLocal: { fontSize: 16, fontWeight: "bold", color: "#007A33" },
+  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  badgeText: { fontSize: 12, fontWeight: "bold" },
+  cardDescricao: { fontSize: 14, color: "#333", marginBottom: 10, lineHeight: 20 },
+  cardData: { fontSize: 12, color: "#888" },
 
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    paddingBottom: 10
-  },
-
-  modalTitulo: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#007A33"
-  },
-
-  modalFechar: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#666",
-    paddingHorizontal: 5
-  },
-
-  modalVazio: {
-    textAlign: "center",
-    color: "#777",
-    paddingVertical: 20,
-    fontSize: 14
-  },
-
-  modalItem: {
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0"
-  },
-
-  modalItemText: {
-    fontSize: 15,
-    color: "#333",
-    fontWeight: "500"
-  },
-
-  modalItemSub: {
-    fontSize: 12,
-    color: "#777",
-    marginTop: 2
-  },
-
-  modalItemTextAtivo: {
-    fontWeight: "bold",
-    color: "#007A33"
-  }
+  // Modais
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.5)", justifyContent: "center", alignItems: "center", padding: 20 },
+  modalContent: { backgroundColor: "#FFF", borderRadius: 20, width: "100%", maxHeight: "70%", padding: 20, elevation: 5 },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 15, borderBottomWidth: 1, borderBottomColor: "#eee", paddingBottom: 10 },
+  modalTitulo: { fontSize: 18, fontWeight: "bold", color: "#007A33" },
+  modalFechar: { fontSize: 20, fontWeight: "bold", color: "#666", paddingHorizontal: 5 },
+  modalVazio: { textAlign: "center", color: "#777", paddingVertical: 20, fontSize: 14 },
+  modalItem: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },
+  modalItemText: { fontSize: 15, color: "#333", fontWeight: "500" },
+  modalItemSub: { fontSize: 12, color: "#777", marginTop: 2 },
+  modalItemTextAtivo: { fontWeight: "bold", color: "#007A33" }
 });

@@ -20,6 +20,7 @@ import EquipamentosScreen from "./screens/EquipamentosScreen";
 import RecursoFormScreen from "./screens/RecursoFormScreen";
 import RelatoriosScreen from "./screens/RelatoriosScreen";
 import PerfilScreen from "./screens/PerfilScreen";
+import ProblemasAdminScreen from "./screens/ProblemasAdminScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -113,6 +114,11 @@ export default function App() {
             name="Relatorios"
             component={RelatoriosScreen}
           />
+
+          <Stack.Screen
+  name="ProblemasAdmin"
+  component={ProblemasAdminScreen}
+/>
 
           <Stack.Screen
             name="Perfil"

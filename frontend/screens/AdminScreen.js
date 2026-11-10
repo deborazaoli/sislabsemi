@@ -13,17 +13,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function AdminScreen({ navigation, route }) {
   const { width } = useWindowDimensions();
 
-  // Recebe os dados do usuário vindos de outra tela, caso existam
   const usuario = route?.params?.usuario || {};
 
   const isSmallScreen = width < 600;
   const isVerySmallScreen = width < 380;
 
-  // No computador: os 4 cards ficam em uma única fila.
-  // No celular: ficam 2 por linha.
   const cardWidth = isSmallScreen
     ? (width - 60) / 2
-    : (width - 160) / 4;
+    : (width - 180) / 5; // Ajustado para acomodar os cards de forma elegante
 
   const cardHeight = isSmallScreen ? 190 : 230;
 
@@ -130,9 +127,7 @@ export default function AdminScreen({ navigation, route }) {
                 <Text
                   style={[
                     styles.buttonText,
-                    {
-                      fontSize: isVerySmallScreen ? 13 : 14,
-                    },
+                    { fontSize: isVerySmallScreen ? 12 : 14 },
                   ]}
                 >
                   Laboratórios
@@ -163,9 +158,7 @@ export default function AdminScreen({ navigation, route }) {
                 <Text
                   style={[
                     styles.buttonText,
-                    {
-                      fontSize: isVerySmallScreen ? 13 : 14,
-                    },
+                    { fontSize: isVerySmallScreen ? 12 : 14 },
                   ]}
                 >
                   Salas
@@ -196,9 +189,7 @@ export default function AdminScreen({ navigation, route }) {
                 <Text
                   style={[
                     styles.buttonText,
-                    {
-                      fontSize: isVerySmallScreen ? 13 : 14,
-                    },
+                    { fontSize: isVerySmallScreen ? 12 : 14 },
                   ]}
                 >
                   Equipamentos
@@ -229,15 +220,45 @@ export default function AdminScreen({ navigation, route }) {
                 <Text
                   style={[
                     styles.buttonText,
-                    {
-                      fontSize: isVerySmallScreen ? 13 : 14,
-                    },
+                    { fontSize: isVerySmallScreen ? 12 : 14 },
                   ]}
                 >
                   Relatórios
                 </Text>
               </View>
             </Pressable>
+
+            {/* GERENCIAR RELATOS / PROBLEMAS */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.card,
+                {
+                  width: cardWidth,
+                  height: cardHeight,
+                },
+                pressed && styles.cardPressed,
+              ]}
+              onPress={() => navigation.navigate("ProblemasAdmin")}
+            >
+              <View style={styles.iconContainer}>
+                <Image
+                  source={require("../assets/problema.png")}
+                  style={styles.icon}
+                />
+              </View>
+
+              <View style={styles.button}>
+                <Text
+                  style={[
+                    styles.buttonText,
+                    { fontSize: isVerySmallScreen ? 12 : 14 },
+                  ]}
+                >
+                  Relatos
+                </Text>
+              </View>
+            </Pressable>
+
           </View>
         </ScrollView>
       </View>
@@ -246,16 +267,8 @@ export default function AdminScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
-
-  container: {
-    flex: 1,
-    backgroundColor: "#CCFCE4",
-  },
-
+  safeArea: { flex: 1, backgroundColor: "#FFFFFF" },
+  container: { flex: 1, backgroundColor: "#CCFCE4" },
   header: {
     backgroundColor: "#FFFFFF",
     flexDirection: "row",
@@ -267,12 +280,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 3,
   },
-
-  logo: {
-    fontWeight: "bold",
-    color: "#006633",
-  },
-
+  logo: { fontWeight: "bold", color: "#006633" },
   userButton: {
     backgroundColor: "#FFFFFF",
     justifyContent: "center",
@@ -284,45 +292,12 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 3,
   },
-
-  userIcon: {
-    width: "60%",
-    height: "60%",
-    tintColor: "#006633",
-    resizeMode: "contain",
-  },
-
-  content: {
-    flexGrow: 1,
-    alignItems: "center",
-  },
-
-  titleContainer: {
-    width: "100%",
-    maxWidth: 1200,
-    marginBottom: 30,
-    alignItems: "center",
-  },
-
-  title: {
-    fontWeight: "bold",
-    color: "#006633",
-    marginBottom: 6,
-  },
-
-  subtitle: {
-    color: "#666666",
-  },
-
-  cardsContainer: {
-    width: "100%",
-    maxWidth: 1200,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 20,
-  },
-
+  userIcon: { width: "60%", height: "60%", tintColor: "#006633", resizeMode: "contain" },
+  content: { flexGrow: 1, alignItems: "center" },
+  titleContainer: { width: "100%", maxWidth: 1200, marginBottom: 30, alignItems: "center" },
+  title: { fontWeight: "bold", color: "#006633", marginBottom: 6 },
+  subtitle: { color: "#666666" },
+  cardsContainer: { width: "100%", maxWidth: 1200, flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 20 },
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
@@ -336,24 +311,9 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5,
   },
-
-  cardPressed: {
-    opacity: 0.85,
-    transform: [{ scale: 0.98 }],
-  },
-
-  iconContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  icon: {
-    width: 90,
-    height: 90,
-    resizeMode: "contain",
-  },
-
+  cardPressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
+  iconContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  icon: { width: 80, height: 80, resizeMode: "contain" },
   button: {
     width: "100%",
     backgroundColor: "#007A33",
@@ -362,10 +322,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
-  buttonText: {
-    color: "#FFFFFF",
-    fontWeight: "600",
-    textAlign: "center",
-  },
+  buttonText: { color: "#FFFFFF", fontWeight: "600", textAlign: "center" },
 });
