@@ -2,11 +2,6 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 
-
-// ======================================================
-// GERAR ID DO USUÁRIO
-// ======================================================
-
 const gerarIdUsuario = () => {
 
   return new Promise((resolve, reject) => {
@@ -52,11 +47,6 @@ const gerarIdUsuario = () => {
 
 };
 
-
-// ======================================================
-// CADASTRO DE USUÁRIO
-// ======================================================
-
 router.post("/cadastro", async (req, res) => {
 
   try {
@@ -67,11 +57,6 @@ router.post("/cadastro", async (req, res) => {
       email,
       senha
     } = req.body;
-
-
-    // ----------------------------------------------
-    // VERIFICAR CAMPOS
-    // ----------------------------------------------
 
     if (
       !nome ||
@@ -87,10 +72,6 @@ router.post("/cadastro", async (req, res) => {
     }
 
 
-    // ----------------------------------------------
-    // PADRONIZAR DADOS
-    // ----------------------------------------------
-
     nome = nome.trim();
 
     matricula = matricula
@@ -101,11 +82,6 @@ router.post("/cadastro", async (req, res) => {
       .trim()
       .toLowerCase();
 
-
-    // ----------------------------------------------
-    // VALIDAR MATRÍCULA
-    // Exemplo: 20241TDS-JG0165
-    // ----------------------------------------------
 
     const formatoMatricula =
       /^\d{5}[A-Z]{3}-[A-Z]{2}\d{4}$/;
@@ -121,10 +97,6 @@ router.post("/cadastro", async (req, res) => {
     }
 
 
-    // ----------------------------------------------
-    // VALIDAR EMAIL
-    // ----------------------------------------------
-
     if (!email.includes("@")) {
 
       return res.status(400).json({
@@ -133,11 +105,6 @@ router.post("/cadastro", async (req, res) => {
       });
 
     }
-
-
-    // ----------------------------------------------
-    // VALIDAR SENHA
-    // ----------------------------------------------
 
     if (senha.length < 6) {
 
@@ -148,10 +115,6 @@ router.post("/cadastro", async (req, res) => {
 
     }
 
-
-    // ----------------------------------------------
-    // VERIFICAR EMAIL EXISTENTE
-    // ----------------------------------------------
 
     const verificarEmail = `
       SELECT idUsuario
@@ -189,11 +152,6 @@ router.post("/cadastro", async (req, res) => {
       });
 
     }
-
-
-    // ----------------------------------------------
-    // VERIFICAR MATRÍCULA EXISTENTE
-    // ----------------------------------------------
 
     const verificarMatricula = `
       SELECT idUsuario
@@ -233,17 +191,10 @@ router.post("/cadastro", async (req, res) => {
     }
 
 
-    // ----------------------------------------------
     // GERAR ID
-    // ----------------------------------------------
-
     const idUsuario =
       await gerarIdUsuario();
 
-
-    // ----------------------------------------------
-    // INSERIR USUÁRIO
-    // ----------------------------------------------
 
     const sql = `
       INSERT INTO usuario
@@ -320,10 +271,44 @@ router.post("/cadastro", async (req, res) => {
 
 });
 
+router.put("/:id", (req, res) => {
+  const { nome, matricula } = req.body;
+  const idUsuario = req.params.id;
 
-// ======================================================
+  if (!nome) {
+    return res.status(400).json({
+      message: "O nome é obrigatório."
+    });
+  }
+
+  const sql = `
+    UPDATE usuario 
+    SET nome = ?, matricula = ? 
+    WHERE idUsuario = ?
+  `;
+
+  db.query(sql, [nome, matricula || null, idUsuario], (err, result) => {
+    if (err) {
+      console.log("Erro ao atualizar usuário:", err);
+      return res.status(500).json({
+        message: "Erro ao atualizar os dados no servidor."
+      });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        message: "Usuário não encontrado."
+      });
+    }
+
+    res.json({
+      ok: true,
+      message: "Dados atualizados com sucesso!"
+    });
+  });
+});
+
 // LOGIN DE USUÁRIO
-// ======================================================
 
 router.post("/login", (req, res) => {
 
@@ -332,10 +317,6 @@ router.post("/login", (req, res) => {
     senha
   } = req.body;
 
-
-  // ----------------------------------------------
-  // VERIFICAR CAMPOS
-  // ----------------------------------------------
 
   if (!email || !senha) {
 
@@ -346,10 +327,7 @@ router.post("/login", (req, res) => {
 
   }
 
-
-  // ----------------------------------------------
   // BUSCAR USUÁRIO
-  // ----------------------------------------------
 
   const sql = `
     SELECT
@@ -385,9 +363,7 @@ router.post("/login", (req, res) => {
       }
 
 
-      // ----------------------------------------------
       // USUÁRIO NÃO ENCONTRADO
-      // ----------------------------------------------
 
       if (results.length === 0) {
 
@@ -400,12 +376,6 @@ router.post("/login", (req, res) => {
 
 
       const usuario = results[0];
-
-
-      // ----------------------------------------------
-      // VERIFICAR SENHA
-      // ----------------------------------------------
-
       if (usuario.senha !== senha) {
 
         return res.status(401).json({
@@ -414,11 +384,6 @@ router.post("/login", (req, res) => {
         });
 
       }
-
-
-      // ----------------------------------------------
-      // BLOQUEAR ADMIN NO LOGIN COMUM
-      // ----------------------------------------------
 
       if (
         usuario.tipoUsuario ===
@@ -431,11 +396,6 @@ router.post("/login", (req, res) => {
         });
 
       }
-
-
-      // ----------------------------------------------
-      // LOGIN REALIZADO
-      // ----------------------------------------------
 
       return res.status(200).json({
 

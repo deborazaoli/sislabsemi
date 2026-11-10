@@ -34,10 +34,8 @@ const PROBLEMAS_COMUNS = [
 export default function RelatarProblemaScreen({ navigation, route }) {
   const usuario = route?.params?.usuario || {};
 
-  // Aba ativa: "novo" ou "meus"
   const [abaAtiva, setAbaAtiva] = useState("novo");
 
-  // Estados do formulário de Novo Relato
   const [tipoRecurso, setTipoRecurso] = useState("sala");
   const [recursosList, setRecursosList] = useState([]);
   const [carregandoRecursos, setCarregandoRecursos] = useState(false);
@@ -49,11 +47,9 @@ export default function RelatarProblemaScreen({ navigation, route }) {
   const [modalProblemaVisivel, setModalProblemaVisivel] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
-  // Estados da aba "Meus Relatos"
   const [meusRelatos, setMeusRelatos] = useState([]);
   const [carregandoRelatos, setCarregandoRelatos] = useState(false);
 
-  // Carregar recursos ao mudar o tipo (Sala / Laboratório)
   useEffect(() => {
     carregarRecursosDoBackend();
   }, [tipoRecurso]);
@@ -79,7 +75,6 @@ export default function RelatarProblemaScreen({ navigation, route }) {
     }
   };
 
-  // Carregar relatos do usuário quando entrar na aba "meus" ou focar na tela
   const carregarMeusRelatos = async () => {
     if (!usuario?.idUsuario) return;
 
@@ -193,7 +188,7 @@ export default function RelatarProblemaScreen({ navigation, route }) {
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        {/* HEADER PADRONIZADO */}
+        {/* HEADER LIMPO */}
         <View style={styles.header}>
           <Pressable
             onPress={() => navigation.goBack()}
@@ -210,150 +205,161 @@ export default function RelatarProblemaScreen({ navigation, route }) {
           <View style={styles.headerSpace} />
         </View>
 
-        {/* ABAS DE NAVEGAÇÃO */}
-        <View style={styles.abasContainer}>
-          <Pressable
-            style={[styles.abaBotao, abaAtiva === "novo" && styles.abaAtiva]}
-            onPress={() => setAbaAtiva("novo")}
-          >
-            <Text style={[styles.abaTexto, abaAtiva === "novo" && styles.abaTextoAtivo]}>
-              Novo Relato
-            </Text>
-          </Pressable>
+        {/* CONTAINER DO CONTEÚDO */}
+        <View style={styles.mainContainer}>
 
-          <Pressable
-            style={[styles.abaBotao, abaAtiva === "meus" && styles.abaAtiva]}
-            onPress={() => {
-              setAbaAtiva("meus");
-              carregarMeusRelatos();
-            }}
-          >
-            <Text style={[styles.abaTexto, abaAtiva === "meus" && styles.abaTextoAtivo]}>
-              Acompanhar Relatos
-            </Text>
-          </Pressable>
-        </View>
-
-        {/* CONTEÚDO DA ABA: NOVO RELATO */}
-        {abaAtiva === "novo" ? (
-          <ScrollView
-            contentContainerStyle={styles.content}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            <Text style={styles.label}>Onde está o problema?</Text>
-            <View style={styles.tipoContainer}>
+          {/* CHIPS DE ABAS FLUTUANTES */}
+          <View style={styles.tabsWrapper}>
+            <View style={styles.tabsSegment}>
               <Pressable
-                style={[styles.tipoBotao, tipoRecurso === "sala" && styles.tipoBotaoAtivo]}
-                onPress={() => setTipoRecurso("sala")}
+                style={[styles.tabChip, abaAtiva === "novo" && styles.tabChipActive]}
+                onPress={() => setAbaAtiva("novo")}
               >
-                <Text style={[styles.tipoTexto, tipoRecurso === "sala" && styles.tipoTextoAtivo]}>
-                  Sala
+                <Text style={[styles.tabChipText, abaAtiva === "novo" && styles.tabChipTextActive]}>
+                  Novo Relato
                 </Text>
               </Pressable>
 
               <Pressable
-                style={[styles.tipoBotao, tipoRecurso === "laboratorio" && styles.tipoBotaoAtivo]}
-                onPress={() => setTipoRecurso("laboratorio")}
+                style={[styles.tabChip, abaAtiva === "meus" && styles.tabChipActive]}
+                onPress={() => {
+                  setAbaAtiva("meus");
+                  carregarMeusRelatos();
+                }}
               >
-                <Text style={[styles.tipoTexto, tipoRecurso === "laboratorio" && styles.tipoTextoAtivo]}>
-                  Laboratório
+                <Text style={[styles.tabChipText, abaAtiva === "meus" && styles.tabChipTextActive]}>
+                  Acompanhar Relatos
                 </Text>
               </Pressable>
             </View>
-
-            <Text style={styles.label}>Selecione o Local</Text>
-            <Pressable
-              style={styles.dropdownSelector}
-              onPress={() => setModalLocalVisivel(true)}
-            >
-              {carregandoRecursos ? (
-                <ActivityIndicator size="small" color="#007A33" />
-              ) : (
-                <Text style={[styles.dropdownText, !recursoSelecionado && { color: "#888" }]}>
-                  {recursoSelecionado ? recursoSelecionado.nome : `Toque para escolher a ${tipoRecurso}...`}
-                </Text>
-              )}
-              <Text style={styles.dropdownIcon}>▼</Text>
-            </Pressable>
-          
-            <Text style={styles.label}>Qual é o problema?</Text>
-            <Pressable
-              style={styles.dropdownSelector}
-              onPress={() => setModalProblemaVisivel(true)}
-            >
-              <Text style={[styles.dropdownText, !problemaSelecionado && { color: "#888" }]}>
-                {problemaSelecionado || "Selecione o problema na lista..."}
-              </Text>
-              <Text style={styles.dropdownIcon}>▼</Text>
-            </Pressable>
-
-            <Text style={styles.label}>Detalhes Adicionais (Opcional)</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Ex: Fica na parede do fundo..."
-              placeholderTextColor="#888"
-              value={observacaoExtra}
-              onChangeText={setObservacaoExtra}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
-
-            <Pressable
-              style={[styles.btnEnviar, enviando && { opacity: 0.7 }]}
-              onPress={enviarRelato}
-              disabled={enviando}
-            >
-              <Text style={styles.btnEnviarTexto}>
-                {enviando ? "Enviando..." : "Enviar Relato"}
-              </Text>
-            </Pressable>
-          </ScrollView>
-        ) : (
-          /* CONTEÚDO DA ABA: ACOMPANHAR RELATOS */
-          <View style={styles.contentMeus}>
-            {carregandoRelatos ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#007A33" />
-                <Text style={styles.loadingText}>Carregando seus relatos...</Text>
-              </View>
-            ) : meusRelatos.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>Você ainda não enviou nenhum relato de problema.</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={meusRelatos}
-                keyExtractor={(item) => String(item.idProblema)}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.listContainer}
-                renderItem={({ item }) => {
-                  const statusInfo = getCorStatus(item.statusProblema);
-                  return (
-                    <View style={styles.cardRelato}>
-                      <View style={styles.cardHeader}>
-                        <Text style={styles.cardLocal}>
-                          {item.tipoRecurso}: {item.nomeRecurso}
-                        </Text>
-                        <View style={[styles.badge, { backgroundColor: statusInfo.bg }]}>
-                          <Text style={[styles.badgeText, { color: statusInfo.text }]}>
-                            {statusInfo.label}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <Text style={styles.cardDescricao}>{item.descricao}</Text>
-                      <Text style={styles.cardData}>Enviado em: {formatarData(item.dataRelato)}</Text>
-                    </View>
-                  );
-                }}
-              />
-            )}
           </View>
-        )}
-    
-        {/* MODAL DE LOCAIS */}
+
+          {/* CONTEÚDO DA ABA NOVO RELATO (DENTRO DE UM CARD BRANCO) */}
+          {abaAtiva === "novo" ? (
+            <ScrollView
+              contentContainerStyle={styles.contentScroll}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.formCard}>
+                <Text style={styles.formCardTitle}>Preencha os dados do chamado</Text>
+
+                <Text style={styles.label}>Onde está o problema?</Text>
+                <View style={styles.tipoContainer}>
+                  <Pressable
+                    style={[styles.tipoBotao, tipoRecurso === "sala" && styles.tipoBotaoAtivo]}
+                    onPress={() => setTipoRecurso("sala")}
+                  >
+                    <Text style={[styles.tipoTexto, tipoRecurso === "sala" && styles.tipoTextoAtivo]}>
+                      Sala
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    style={[styles.tipoBotao, tipoRecurso === "laboratorio" && styles.tipoBotaoAtivo]}
+                    onPress={() => setTipoRecurso("laboratorio")}
+                  >
+                    <Text style={[styles.tipoTexto, tipoRecurso === "laboratorio" && styles.tipoTextoAtivo]}>
+                      Laboratório
+                    </Text>
+                  </Pressable>
+                </View>
+
+                <Text style={styles.label}>Selecione o Local</Text>
+                <Pressable
+                  style={styles.dropdownSelector}
+                  onPress={() => setModalLocalVisivel(true)}
+                >
+                  {carregandoRecursos ? (
+                    <ActivityIndicator size="small" color="#007A33" />
+                  ) : (
+                    <Text style={[styles.dropdownText, !recursoSelecionado && { color: "#888" }]}>
+                      {recursoSelecionado ? recursoSelecionado.nome : `Toque para escolher a ${tipoRecurso}...`}
+                    </Text>
+                  )}
+                  <Text style={styles.dropdownIcon}>▼</Text>
+                </Pressable>
+              
+                <Text style={styles.label}>Qual é o problema?</Text>
+                <Pressable
+                  style={styles.dropdownSelector}
+                  onPress={() => setModalProblemaVisivel(true)}
+                >
+                  <Text style={[styles.dropdownText, !problemaSelecionado && { color: "#888" }]}>
+                    {problemaSelecionado || "Selecione o problema na lista..."}
+                  </Text>
+                  <Text style={styles.dropdownIcon}>▼</Text>
+                </Pressable>
+
+                <Text style={styles.label}>Detalhes Adicionais (Opcional)</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Ex: Fica na parede do fundo..."
+                  placeholderTextColor="#888"
+                  value={observacaoExtra}
+                  onChangeText={setObservacaoExtra}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+
+                <Pressable
+                  style={[styles.btnEnviar, enviando && { opacity: 0.7 }]}
+                  onPress={enviarRelato}
+                  disabled={enviando}
+                >
+                  <Text style={styles.btnEnviarTexto}>
+                    {enviando ? "Enviando..." : "Enviar Relato"}
+                  </Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          ) : (
+            /* CONTEÚDO DA ABA ACOMPANHAR RELATOS */
+            <View style={styles.meusContainer}>
+              {carregandoRelatos ? (
+                <View style={styles.centerBox}>
+                  <ActivityIndicator size="large" color="#007A33" />
+                  <Text style={styles.loadingText}>Carregando seus relatos...</Text>
+                </View>
+              ) : meusRelatos.length === 0 ? (
+                <View style={styles.centerBox}>
+                  <Text style={styles.emptyText}>Você ainda não possui relatos cadastrados.</Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={meusRelatos}
+                  keyExtractor={(item) => String(item.idProblema)}
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.listContent}
+                  renderItem={({ item }) => {
+                    const statusInfo = getCorStatus(item.statusProblema);
+                    return (
+                      <View style={styles.cardRelato}>
+                        <View style={styles.cardHeader}>
+                          <Text style={styles.cardLocal}>
+                            {item.tipoRecurso}: {item.nomeRecurso}
+                          </Text>
+                          <View style={[styles.badge, { backgroundColor: statusInfo.bg }]}>
+                            <Text style={[styles.badgeText, { color: statusInfo.text }]}>
+                              {statusInfo.label}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <Text style={styles.cardDescricao}>{item.descricao}</Text>
+                        <Text style={styles.cardData}>Enviado em: {formatarData(item.dataRelato)}</Text>
+                      </View>
+                    );
+                  }}
+                />
+              )}
+            </View>
+          )}
+
+        </View>
+
+        {/* MODAL LOCAL */}
         <Modal
           visible={modalLocalVisivel}
           transparent={true}
@@ -400,7 +406,7 @@ export default function RelatarProblemaScreen({ navigation, route }) {
           </View>
         </Modal>
 
-        {/* MODAL DE PROBLEMAS COMUNS */}
+        {/* MODAL PROBLEMA */}
         <Modal
           visible={modalProblemaVisivel}
           transparent={true}
@@ -448,6 +454,7 @@ export default function RelatarProblemaScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#FFFFFF" },
   container: { flex: 1, backgroundColor: "#CCFCE4" },
+  
   header: {
     height: 60,
     backgroundColor: "#FFF",
@@ -466,46 +473,79 @@ const styles = StyleSheet.create({
   tituloHeader: { fontSize: 22, fontWeight: "900", letterSpacing: 1, color: "#007A33", textAlign: "center" },
   headerSpace: { width: 38 },
 
-  // Estilos das Abas
-  abasContainer: {
-    flexDirection: "row",
-    backgroundColor: "#FFF",
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E2E2"
+  mainContainer: { flex: 1 },
+
+  /* ESTILO PÍLULA FLUTUANTE PARA AS ABAS */
+  tabsWrapper: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 10
   },
-  abaBotao: {
+  tabsSegment: {
+    flexDirection: "row",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 30,
+    padding: 4,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: "#A6E4CF"
+  },
+  tabChip: {
     flex: 1,
     paddingVertical: 10,
+    borderRadius: 25,
     alignItems: "center",
-    borderRadius: 20,
-    marginHorizontal: 5
+    justifyContent: "center"
   },
-  abaAtiva: {
+  tabChipActive: {
     backgroundColor: "#007A33"
   },
-  abaTexto: {
+  tabChipText: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: "700",
     color: "#007A33"
   },
-  abaTextoAtivo: {
-    color: "#FFF"
+  tabChipTextActive: {
+    color: "#FFFFFF"
   },
 
-  content: { padding: 20, paddingBottom: 40 },
-  contentMeus: { flex: 1, padding: 20 },
-  
+  contentScroll: { paddingHorizontal: 20, paddingBottom: 40, paddingTop: 5 },
+  meusContainer: { flex: 1, paddingHorizontal: 20, paddingTop: 5 },
+
+  /* CARD BRANCO DE FUNDO PARA O FORMULÁRIO */
+  formCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 20,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    borderWidth: 1,
+    borderColor: "#E2F4EC"
+  },
+  formCardTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#007A33",
+    marginBottom: 15,
+    textAlign: "center"
+  },
+
   label: { fontSize: 14, fontWeight: "bold", color: "#006633", marginBottom: 8, marginTop: 10 },
-  tipoContainer: { flexDirection: "row", gap: 12, marginBottom: 10 },
-  tipoBotao: { flex: 1, backgroundColor: "#FFF", paddingVertical: 12, borderRadius: 12, alignItems: "center", borderWidth: 1.5, borderColor: "#A6E4CF" },
+  tipoContainer: { flexDirection: "row", gap: 12, marginBottom: 5 },
+  tipoBotao: { flex: 1, backgroundColor: "#F9F9F9", paddingVertical: 12, borderRadius: 12, alignItems: "center", borderWidth: 1.5, borderColor: "#D5EEE3" },
   tipoBotaoAtivo: { backgroundColor: "#007A33", borderColor: "#007A33" },
   tipoTexto: { fontSize: 15, fontWeight: "bold", color: "#007A33" },
   tipoTextoAtivo: { color: "#FFF" },
 
   dropdownSelector: {
-    backgroundColor: "#FFF",
+    backgroundColor: "#F9F9F9",
     borderWidth: 1,
     borderColor: "#D5EEE3",
     borderRadius: 12,
@@ -519,7 +559,7 @@ const styles = StyleSheet.create({
   dropdownText: { fontSize: 15, color: "#333" },
   dropdownIcon: { fontSize: 12, color: "#007A33", fontWeight: "bold" },
 
-  input: { backgroundColor: "#FFF", borderWidth: 1, borderColor: "#D5EEE3", borderRadius: 12, padding: 14, fontSize: 15, color: "#333", marginBottom: 5 },
+  input: { backgroundColor: "#F9F9F9", borderWidth: 1, borderColor: "#D5EEE3", borderRadius: 12, padding: 14, fontSize: 15, color: "#333", marginBottom: 5 },
   textArea: { height: 90, paddingTop: 12 },
 
   btnEnviar: {
@@ -527,7 +567,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     padding: 16,
     alignItems: "center",
-    marginTop: 25,
+    marginTop: 20,
     elevation: 3,
     shadowColor: "#000",
     shadowOpacity: 0.15,
@@ -536,31 +576,31 @@ const styles = StyleSheet.create({
   },
   btnEnviarTexto: { color: "#FFF", fontSize: 16, fontWeight: "bold" },
 
-  // Estilos da lista de "Meus Relatos"
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  centerBox: { flex: 1, justifyContent: "center", alignItems: "center", paddingVertical: 40 },
   loadingText: { marginTop: 10, color: "#007A33", fontWeight: "600" },
-  emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   emptyText: { color: "#666", fontSize: 15, textAlign: "center" },
-  listContainer: { paddingBottom: 20 },
+  listContent: { paddingBottom: 30, paddingTop: 5 },
+
   cardRelato: {
     backgroundColor: "#FFF",
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 12,
     elevation: 2,
     shadowColor: "#000",
     shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    borderLeftWidth: 4,
+    borderLeftColor: "#007A33"
   },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  cardLocal: { fontSize: 16, fontWeight: "bold", color: "#007A33" },
+  cardLocal: { fontSize: 16, fontWeight: "bold", color: "#007A33", flex: 1, marginRight: 10 },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   badgeText: { fontSize: 12, fontWeight: "bold" },
   cardDescricao: { fontSize: 14, color: "#333", marginBottom: 10, lineHeight: 20 },
   cardData: { fontSize: 12, color: "#888" },
 
-  // Modais
   modalOverlay: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.5)", justifyContent: "center", alignItems: "center", padding: 20 },
   modalContent: { backgroundColor: "#FFF", borderRadius: 20, width: "100%", maxHeight: "70%", padding: 20, elevation: 5 },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 15, borderBottomWidth: 1, borderBottomColor: "#eee", paddingBottom: 10 },

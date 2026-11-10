@@ -17,9 +17,6 @@ function converterTipo(tipo) {
 }
 
 
-// ===============================
-// TIPOS DE RECURSOS
-// ===============================
 router.get("/tipos", (req, res) => {
   db.query(
     "SELECT DISTINCT tipoRecurso FROM recurso",
@@ -37,11 +34,6 @@ router.get("/tipos", (req, res) => {
   );
 });
 
-
-// ===============================
-// RECURSOS DISPONÍVEIS PARA
-// DETERMINADO DIA E HORÁRIO
-// ===============================
 router.get("/disponiveis", (req, res) => {
   const {
     tipo,
@@ -117,10 +109,7 @@ router.get("/disponiveis", (req, res) => {
   );
 });
 
-
-// ===============================
 // TODOS OS RECURSOS
-// ===============================
 router.get("/", (req, res) => {
   const { tipo } = req.query;
 
@@ -153,10 +142,7 @@ router.get("/", (req, res) => {
   });
 });
 
-
-// ===============================
 // CADASTRAR RECURSO
-// ===============================
 router.post("/", (req, res) => {
   const {
     nome,
@@ -238,10 +224,7 @@ router.post("/", (req, res) => {
   );
 });
 
-
-// ===============================
 // EXCLUIR RECURSO
-// ===============================
 router.delete("/:id", (req, res) => {
   db.query(
     "DELETE FROM recurso WHERE idRecurso = ?",
@@ -266,9 +249,7 @@ router.delete("/:id", (req, res) => {
 });
 
 
-// ===============================
 // EDITAR RECURSO
-// ===============================
 router.put("/:id", (req, res) => {
   const {
     nome,

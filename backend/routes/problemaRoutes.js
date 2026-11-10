@@ -23,9 +23,6 @@ function obterAgoraBrasil() {
   return `${valores.year}-${valores.month}-${valores.day} ${valores.hour}:${valores.minute}:${valores.second}`;
 }
 
-// ======================================================
-// CADASTRAR UM NOVO PROBLEMA / RELATO
-// ======================================================
 router.post("/", (req, res) => {
   const {
     idUsuario,
@@ -88,9 +85,6 @@ router.post("/", (req, res) => {
   );
 });
 
-// ======================================================
-// LISTAR TODOS OS PROBLEMAS (Para a Área Administrativa)
-// ======================================================
 router.get("/", (req, res) => {
   const sql = `
     SELECT * 
@@ -110,9 +104,6 @@ router.get("/", (req, res) => {
   });
 });
 
-// ======================================================
-// LISTAR PROBLEMAS DO USUÁRIO LOGADO
-// ======================================================
 router.get("/usuario/:id", (req, res) => {
   const sql = `
     SELECT * 
@@ -133,9 +124,6 @@ router.get("/usuario/:id", (req, res) => {
   });
 });
 
-// ======================================================
-// ATUALIZAR STATUS DO PROBLEMA
-// ======================================================
 router.put("/:id/status", (req, res) => {
   const { statusProblema } = req.body;
   const idProblema = req.params.id;

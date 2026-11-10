@@ -8,7 +8,8 @@ import {
   Image,
   TextInput,
   Modal,
-  ScrollView
+  ScrollView,
+  ActivityIndicator
 } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -19,16 +20,26 @@ import { SESSAO_KEY } from "./LoginUsuarioScreen";
 import API_URL from "../services/api";
 
 export default function PerfilScreen({ navigation, route }) {
-  const usuario = route?.params?.usuario || {};
+  const [usuario, setUsuario] = useState(route?.params?.usuario || {});
 
-  // Estados do usuário
+  // Estados gerais
   const [foto, setFoto] = useState(usuario.foto || null);
+  const [carregando, setCarregando] = useState(false);
+
+  // Estados do Modal de Senha
   const [modalSenhaVisivel, setModalSenhaVisivel] = useState(false);
   const [senhaAtual, setSenhaAtual] = useState("");
   const [novaSenha, setNovaSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
+  const [salvandoSenha, setSalvandoSenha] = useState(false);
 
-  // Função para alterar a foto de perfil
+  // Estados do Modal de Edição de Dados (Nome / Matrícula)
+  const [modalEditarVisivel, setModalEditarVisivel] = useState(false);
+  const [novoNome, setNovoNome] = useState(usuario.nome || "");
+  const [novaMatricula, setNovaMatricula] = useState(usuario.matricula || "");
+  const [salvandoDados, setSalvandoDados] = useState(false);
+
+  // Função para alterar e persistir a foto de perfil
   const alterarFoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
@@ -45,8 +56,59 @@ export default function PerfilScreen({ navigation, route }) {
     });
 
     if (!resultado.canceled) {
-      setFoto(resultado.assets[0].uri);
-      // Aqui você também pode enviar a foto para a sua API se necessário
+      const uriFoto = resultado.assets[0].uri;
+      setFoto(uriFoto);
+
+      // Atualiza o estado local e o AsyncStorage com a nova foto
+      try {
+        const usuarioAtualizado = { ...usuario, foto: uriFoto };
+        setUsuario(usuarioAtualizado);
+        await AsyncStorage.setItem(SESSAO_KEY, JSON.stringify(usuarioAtualizado));
+      } catch (error) {
+        console.log("Erro ao salvar foto no armazenamento local:", error);
+      }
+    }
+  };
+
+  // Função para salvar novos dados cadastrais (Nome / Matrícula)
+  const salvarDadosPessoais = async () => {
+    if (!novoNome.trim()) {
+      Alert.alert("Atenção", "O nome não pode ficar vazio.");
+      return;
+    }
+
+    try {
+      setSalvandoDados(true);
+
+      const resposta = await fetch(`${API_URL}/usuarios/${usuario.idUsuario}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome: novoNome.trim(), matricula: novaMatricula.trim() })
+      });
+
+      const json = await resposta.json();
+
+      if (!resposta.ok) {
+        throw new Error(json.message || "Erro ao atualizar dados.");
+      }
+
+      // Atualiza dados locais e sessão
+      const usuarioAtualizado = {
+        ...usuario,
+        nome: novoNome.trim(),
+        matricula: novaMatricula.trim()
+      };
+
+      setUsuario(usuarioAtualizado);
+      await AsyncStorage.setItem(SESSAO_KEY, JSON.stringify(usuarioAtualizado));
+
+      Alert.alert("Sucesso", "Informações atualizadas com sucesso!");
+      setModalEditarVisivel(false);
+    } catch (error) {
+      console.log("Erro ao atualizar dados:", error);
+      Alert.alert("Erro", error.message || "Não foi possível atualizar as informações.");
+    } finally {
+      setSalvandoDados(false);
     }
   };
 
@@ -68,15 +130,18 @@ export default function PerfilScreen({ navigation, route }) {
     }
 
     try {
-      // Exemplo de requisição para atualizar senha na API
+      setSalvandoSenha(true);
+
       const resposta = await fetch(`${API_URL}/usuarios/senha/${usuario.idUsuario}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ senhaAtual, novaSenha })
       });
 
+      const json = await resposta.json();
+
       if (!resposta.ok) {
-        throw new Error("Não foi possível alterar a senha.");
+        throw new Error(json.message || "Senha atual incorreta.");
       }
 
       Alert.alert("Sucesso", "Senha alterada com sucesso!");
@@ -86,7 +151,9 @@ export default function PerfilScreen({ navigation, route }) {
       setConfirmarSenha("");
     } catch (error) {
       console.log("Erro ao alterar senha:", error);
-      Alert.alert("Erro", "Senha atual incorreta ou erro no servidor.");
+      Alert.alert("Erro", error.message || "Senha atual incorreta ou erro no servidor.");
+    } finally {
+      setSalvandoSenha(false);
     }
   };
 
@@ -159,7 +226,7 @@ export default function PerfilScreen({ navigation, route }) {
           <Text style={styles.alterarFotoTexto}>Toque para alterar a foto</Text>
         </View>
 
-        {/* INFORMAÇÕES FIXAS */}
+        {/* INFORMAÇÕES DO USUÁRIO */}
         <View style={styles.infoCard}>
           <View style={styles.infoLinha}>
             <Text style={styles.infoRotulo}>Nome</Text>
@@ -179,14 +246,35 @@ export default function PerfilScreen({ navigation, route }) {
             <Text style={styles.infoRotulo}>Matrícula</Text>
             <Text style={styles.infoValor}>{usuario.matricula || "Não informada"}</Text>
           </View>
+
+          <View style={styles.divisor} />
+
+          <View style={styles.infoLinha}>
+            <Text style={styles.infoRotulo}>Tipo de Acesso</Text>
+            <Text style={[styles.infoValor, { textTransform: "capitalize", color: "#007A33" }]}>
+              {usuario.tipoUsuario || "Usuário"}
+            </Text>
+          </View>
         </View>
+
+        {/* BOTÃO EDITAR DADOS PESSOAIS */}
+        <Pressable
+          style={styles.btnEditarPerfil}
+          onPress={() => {
+            setNovoNome(usuario.nome || "");
+            setNovaMatricula(usuario.matricula || "");
+            setModalEditarVisivel(true);
+          }}
+        >
+          <Text style={styles.txtEditarPerfil}>Editar Informações</Text>
+        </Pressable>
 
         {/* BOTÃO EDITAR SENHA */}
         <Pressable
           style={styles.btnEditarSenha}
           onPress={() => setModalSenhaVisivel(true)}
         >
-          <Text style={styles.txtEditarSenha}>Editar Senha</Text>
+          <Text style={styles.txtEditarSenha}>Alterar Senha</Text>
         </Pressable>
 
         {/* BOTÃO LOGOUT NO FINAL */}
@@ -198,6 +286,54 @@ export default function PerfilScreen({ navigation, route }) {
         </Pressable>
 
       </ScrollView>
+
+      {/* MODAL DE EDITAR INFORMAÇÕES PESSOAIS */}
+      <Modal
+        visible={modalEditarVisivel}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalEditarVisivel(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Editar Informações</Text>
+
+            <Text style={styles.inputLabel}>Nome Completo</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Seu nome"
+              placeholderTextColor="#777"
+              value={novoNome}
+              onChangeText={setNovoNome}
+            />
+
+            <Text style={styles.inputLabel}>Matrícula</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Sua matrícula"
+              placeholderTextColor="#777"
+              value={novaMatricula}
+              onChangeText={setNovaMatricula}
+            />
+
+            <Pressable 
+              style={[styles.saveBtn, salvandoDados && { opacity: 0.7 }]} 
+              onPress={salvarDadosPessoais}
+              disabled={salvandoDados}
+            >
+              {salvandoDados ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={styles.saveText}>Salvar Alterações</Text>
+              )}
+            </Pressable>
+
+            <Pressable onPress={() => setModalEditarVisivel(false)} style={styles.cancelButtonTouch}>
+              <Text style={styles.cancelModal}>Cancelar</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       {/* MODAL DE EDITAR SENHA */}
       <Modal
@@ -237,11 +373,19 @@ export default function PerfilScreen({ navigation, route }) {
               onChangeText={setConfirmarSenha}
             />
 
-            <Pressable style={styles.saveBtn} onPress={salvarNovaSenha}>
-              <Text style={styles.saveText}>Salvar Nova Senha</Text>
+            <Pressable 
+              style={[styles.saveBtn, salvandoSenha && { opacity: 0.7 }]} 
+              onPress={salvarNovaSenha}
+              disabled={salvandoSenha}
+            >
+              {salvandoSenha ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={styles.saveText}>Salvar Nova Senha</Text>
+              )}
             </Pressable>
 
-            <Pressable onPress={() => setModalSenhaVisivel(false)}>
+            <Pressable onPress={() => setModalSenhaVisivel(false)} style={styles.cancelButtonTouch}>
               <Text style={styles.cancelModal}>Cancelar</Text>
             </Pressable>
           </View>
@@ -379,7 +523,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
     borderRadius: 16,
     padding: 18,
-    marginBottom: 20,
+    marginBottom: 15,
     elevation: 2,
     shadowColor: "#000",
     shadowOpacity: 0.05,
@@ -410,6 +554,22 @@ const styles = StyleSheet.create({
     backgroundColor: "#EFEFEF"
   },
 
+  btnEditarPerfil: {
+    width: "100%",
+    backgroundColor: "#007A33",
+    padding: 15,
+    borderRadius: 12,
+    alignItems: "center",
+    marginBottom: 10,
+    elevation: 2
+  },
+
+  txtEditarPerfil: {
+    color: "#FFF",
+    fontWeight: "bold",
+    fontSize: 16
+  },
+
   btnEditarSenha: {
     width: "100%",
     backgroundColor: "#FFF",
@@ -418,7 +578,7 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 12,
     alignItems: "center",
-    marginBottom: 12
+    marginBottom: 10
   },
 
   txtEditarSenha: {
@@ -452,7 +612,8 @@ const styles = StyleSheet.create({
   modalBox: {
     backgroundColor: "#FFF",
     padding: 22,
-    borderRadius: 16
+    borderRadius: 16,
+    elevation: 5
   },
 
   modalTitle: {
@@ -461,6 +622,14 @@ const styles = StyleSheet.create({
     color: "#007A33",
     marginBottom: 15,
     textAlign: "center"
+  },
+
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#444",
+    marginBottom: 5,
+    marginLeft: 2
   },
 
   input: {
@@ -478,7 +647,9 @@ const styles = StyleSheet.create({
     padding: 13,
     borderRadius: 10,
     alignItems: "center",
-    marginTop: 5
+    marginTop: 5,
+    minHeight: 48,
+    justifyContent: "center"
   },
 
   saveText: {
@@ -487,10 +658,14 @@ const styles = StyleSheet.create({
     fontSize: 16
   },
 
+  cancelButtonTouch: {
+    padding: 10,
+    alignItems: "center"
+  },
+
   cancelModal: {
-    marginTop: 15,
+    marginTop: 5,
     color: "#E53935",
-    textAlign: "center",
     fontWeight: "bold",
     fontSize: 15
   }
