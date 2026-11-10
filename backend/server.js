@@ -4,12 +4,13 @@ const cors = require("cors");
 const recursoRoutes = require("./routes/recursoRoutes");
 const reservaRoutes = require("./routes/reservaRoutes");
 const authRoutes = require("./routes/authRoutes");
-
+const problemaRoutes = require("./routes/problemaRoutes");
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
+app.use("/problemas", problemaRoutes);
 app.use("/recursos", recursoRoutes);
 app.use("/reservas", reservaRoutes);
 app.use("/auth", authRoutes);

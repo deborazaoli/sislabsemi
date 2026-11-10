@@ -91,11 +91,23 @@ export default function RelatarProblemaScreen({ navigation, route }) {
         tipoRecurso: tipoRecurso === "sala" ? "Sala" : "Laboratório",
         nomeRecurso: recursoSelecionado.nome,
         idRecurso: recursoSelecionado.idRecurso,
-        descricao: descricaoFinal,
-        dataRelato: new Date().toISOString()
+        descricao: descricaoFinal
       };
 
-      //falta implementar o envio pro backend
+      // REQUISIÇÃO REAL PARA O BACKEND
+      const res = await fetch(`${API_URL}/problemas`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        throw new Error(json.message || "Erro ao enviar relato");
+      }
 
       Alert.alert(
         "Problema relatado!",
@@ -109,7 +121,7 @@ export default function RelatarProblemaScreen({ navigation, route }) {
       );
     } catch (error) {
       console.log("Erro ao enviar problema:", error);
-      Alert.alert("Erro", "Não foi possível enviar o relato no momento. Tente novamente.");
+      Alert.alert("Erro", error.message || "Não foi possível enviar o relato no momento. Tente novamente.");
     } finally {
       setEnviando(false);
     }
@@ -195,7 +207,6 @@ export default function RelatarProblemaScreen({ navigation, route }) {
             )}
             <Text style={styles.dropdownIcon}>▼</Text>
           </Pressable>
-
         
           <Text style={styles.label}>Qual é o problema?</Text>
           <Pressable
@@ -233,7 +244,6 @@ export default function RelatarProblemaScreen({ navigation, route }) {
           </Pressable>
 
         </ScrollView>
-
     
         <Modal
           visible={modalLocalVisivel}
